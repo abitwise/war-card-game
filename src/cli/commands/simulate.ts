@@ -165,16 +165,15 @@ export const createSimulateCommand = (): Command => {
 
       if (options.json) {
         console.log(JSON.stringify(summary, null, 2));
-        return summary;
+        return;
       }
 
       if (options.csv) {
         console.log(renderCsv(summary));
-        return summary;
+        return;
       }
 
       renderTextSummary(summary);
-      return summary;
     });
 
   return command;
