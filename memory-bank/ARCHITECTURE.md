@@ -22,7 +22,7 @@ This service is a TypeScript/Node.js CLI application that separates a pure War g
 - **TableState**: `{ battleCards: { playerId: number; card: Card; faceDown: boolean }[]; inWar: boolean }`.
 - **GameState**: `{ players: PlayerState[]; round: number; active: boolean; winner?: number; stats: { wars: number; flips: number }; config: WarRules }`.
 - **WarRules**: `{ numDecks: 1; warFaceDownCount: 1; collectMode: 'bottom-of-draw' | 'won-pile'; shuffleWonPileOnRecycle: true; maxRounds?: number; tieResolution: 'standard-war' | 'sudden-death'; aceHigh: true }`.
-- **Events** (examples): `RoundStarted`, `CardsFlipped`, `WarStarted`, `WarCardsPlaced`, `TrickWon`, `RecyclePile`, `GameEnded`. Events drive UI/logging without embedding I/O in the engine.
+- **Events** (examples): `RoundStarted`, `CardsFlipped`, `WarStarted`, `WarCardsPlaced`, `TrickWon`, `PileRecycled`, `GameEnded`. Events drive UI/logging without embedding I/O in the engine.
 
 ## Design Decisions
 - **Pure engine, I/O adapters**: Enables reuse across interactive and simulation modes and simplifies testing.

@@ -42,7 +42,7 @@
   - [x] Provide defaults and validation (zod optional).
 
 ### [P1-4] Round Resolution Engine
-- Status: Backlog
+- Status: Done
 - Summary: Implement `playRound/step` resolving a full battle including wars.
 - Context: Core gameplay for both interactive and simulation flows.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -51,9 +51,9 @@
   - Support recycling won pile when draw pile empty (optional shuffle).
   - Decide and document behavior when player lacks enough cards during war (use “place what you can; if no face-up, you lose”).
 - Tasks:
-  - [ ] Implement round resolution returning new state plus events.
-  - [ ] Handle elimination and winner detection.
-  - [ ] Add tests for wars, recycling, and edge cases.
+  - [x] Implement round resolution returning new state plus events.
+  - [x] Handle elimination and winner detection.
+  - [x] Add tests for wars, recycling, and edge cases.
 
 ### [P1-5] Simulation CLI Command
 - Status: Backlog
