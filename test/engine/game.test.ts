@@ -16,6 +16,6 @@ describe('runGame', () => {
     const endings = result.events.filter((event) => event.type === 'GameEnded');
 
     expect(result.state.active).toBe(false);
-    expect(endings.some((event) => event.type === 'GameEnded' && event.reason === 'timeout')).toBe(true);
+    expect(endings.some((event) => event.reason === 'timeout')).toBe(true);
   });
 });

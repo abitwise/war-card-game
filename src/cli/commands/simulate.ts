@@ -37,7 +37,12 @@ const parseGameCount = (value: string): number => {
 };
 
 const endingFromEvents = (events: { type: string; reason?: SimulationRun['reason'] }[]): SimulationRun['reason'][] =>
-  events.filter((event) => event.type === 'GameEnded' && event.reason).map((event) => event.reason as SimulationRun['reason']);
+  events
+    .filter(
+      (event): event is { type: 'GameEnded'; reason: SimulationRun['reason'] } =>
+        event.type === 'GameEnded'
+    )
+    .map((event) => event.reason);
 
 const determineEndingReason = (events: SimulationRun['reason'][], winner?: number): SimulationRun['reason'] => {
   if (events.includes('timeout')) {
