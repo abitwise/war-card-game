@@ -183,6 +183,7 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
   if (loserCards === 0 && winnerCards > 0) {
     state.active = false;
     state.winner = roundWinner;
+    state.table = { battleCards: [], inWar: false };
     events.push({ type: 'GameEnded', reason: 'win', winner: roundWinner });
   } else {
     state.table = { battleCards: [], inWar: false };
