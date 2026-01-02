@@ -56,7 +56,7 @@
   - [x] Add tests for wars, recycling, and edge cases.
 
 ### [P1-5] Simulation CLI Command
-- Status: Backlog
+- Status: Done
 - Summary: Add `war simulate` command to run N games and report aggregates.
 - Context: Enables analytics and regression checks.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -64,8 +64,8 @@
 - Technical notes:
   - Use `commander`; leverage engine `run` function; support seed base pattern (seed + index).
 - Tasks:
-  - [ ] Implement command wiring and output formatting.
-  - [ ] Add tests for argument parsing and deterministic results.
+  - [x] Implement command wiring and output formatting.
+  - [x] Add tests for argument parsing and deterministic results.
 
 ### [P1-6] Interactive Play CLI
 - Status: Backlog
