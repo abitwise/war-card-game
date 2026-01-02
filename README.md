@@ -21,11 +21,12 @@ pnpm exec war simulate --games 10 --seed demo --json
 ### Interactive Play
 
 ```bash
-war play [--seed <seed>] [--autoplay]
+war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>]
 ```
 
 - Default seed: `interactive` (use `--seed` to reproduce a game).
 - Controls: `Enter` (next round), `a` (toggle autoplay bursts), `s` (stats), `q` (quit), `?` (help).
+- `--ui prompt` uses the existing prompt-based flow (default). `--ui ink` enables a live Ink TUI that updates stats/events without prompts while honoring the same controls and autoplay bursts.
 - Output shows per-round events, wars, pile recycling, and game end reasons (win/timeout/stalemate).
 
 ### Simulations

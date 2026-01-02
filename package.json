@@ -37,10 +37,13 @@
     "@inquirer/prompts": "^5.0.0",
     "chalk": "^5.0.0",
     "commander": "^10.0.0",
+    "ink": "^6.6.0",
+    "react": "^19.2.3",
     "seedrandom": "^3.0.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/react": "^19.2.7",
     "@types/seedrandom": "^3.0.5",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",

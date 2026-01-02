@@ -97,7 +97,7 @@
 ## Backlog / Future
 
 ### [F1-1] Enhanced TUI with Ink
-- Status: Backlog
+- Status: Done
 - Summary: Optional richer TUI experience using `ink`.
 - Context: Provide a more dynamic interface once core CLI is solid.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -105,7 +105,7 @@
 - Technical notes:
   - Leverage existing event stream; keep engine untouched.
 - Tasks:
-  - [ ] Add flag and renderer; ensure compatibility with autoplay.
+  - [x] Add flag and renderer; ensure compatibility with autoplay.
 
 ### [F1-2] Advanced Rule Variants
 - Status: Backlog
