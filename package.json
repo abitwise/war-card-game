@@ -1,0 +1,52 @@
+{
+  "name": "war-card-game",
+  "version": "0.1.0",
+  "description": "CLI-focused War card game with deterministic engine and simulation tooling.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "war": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx src/index.ts play",
+    "simulate": "tsx src/index.ts simulate",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --check ."
+  },
+  "keywords": [
+    "war",
+    "cli",
+    "card-game",
+    "typescript"
+  ],
+  "author": "",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.13.1",
+  "dependencies": {
+    "@inquirer/prompts": "^5.0.0",
+    "chalk": "^5.0.0",
+    "commander": "^10.0.0",
+    "seedrandom": "^3.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

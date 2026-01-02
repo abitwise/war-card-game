@@ -3,7 +3,7 @@
 ## Phase 1 (Current)
 
 ### [P1-1] Project Tooling and Scaffolding
-- Status: Backlog
+- Status: Done
 - Summary: Initialize TypeScript Node CLI project with baseline tooling and scripts.
 - Context: Needed to run dev commands, build, and test the future engine/CLI.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -12,12 +12,12 @@
   - Use `pnpm` (or npm) with `tsx`, `typescript`, `commander`, `@inquirer/prompts`, `chalk`, `seedrandom`, `vitest`, `eslint`, `prettier`.
   - Configure `tsconfig` for NodeNext/ES2022; add `bin` entry for CLI.
 - Tasks:
-  - [ ] Add `package.json` with scripts and bin entry.
-  - [ ] Configure `tsconfig.json`, `eslint`, `prettier`.
-  - [ ] Add basic folder scaffold under `src/` and `test/`.
+  - [x] Add `package.json` with scripts and bin entry.
+  - [x] Configure `tsconfig.json`, `eslint`, `prettier`.
+  - [x] Add basic folder scaffold under `src/` and `test/`.
 
 ### [P1-2] Deck and RNG Foundations
-- Status: Backlog
+- Status: Done
 - Summary: Implement cards, deck generation, and deterministic shuffling.
 - Context: Core building block for engine and simulations.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -26,8 +26,8 @@
   - Card ranks 2..14 (Ace high), four suits.
   - Use `seedrandom` or injectable RNG interface.
 - Tasks:
-  - [ ] Implement `Card`, `Deck` helpers with deterministic shuffle.
-  - [ ] Add tests for uniqueness and deterministic ordering.
+  - [x] Implement `Card`, `Deck` helpers with deterministic shuffle.
+  - [x] Add tests for uniqueness and deterministic ordering.
 
 ### [P1-3] Game State and Rules Model
 - Status: Backlog
