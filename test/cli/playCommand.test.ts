@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createPlayCommand } from '../../src/cli/commands/play.js';
 import { defaultWarRules } from '../../src/engine/rules.js';
