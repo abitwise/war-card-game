@@ -82,7 +82,7 @@
   - [x] Add smoke tests or snapshot coverage for CLI output.
 
 ### [P1-7] Packaging and Docs
-- Status: Backlog
+- Status: Done
 - Summary: Final polish for installable CLI and documentation.
 - Context: Ensures usability and discoverability.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -90,9 +90,9 @@
 - Technical notes:
   - Update README with examples; ensure build output in `dist/`.
 - Tasks:
-  - [ ] Configure build artifacts and bin target.
-  - [ ] Document CLI usage and options.
-  - [ ] Verify `maxRounds` and default rules are documented.
+  - [x] Configure build artifacts and bin target.
+  - [x] Document CLI usage and options.
+  - [x] Verify `maxRounds` and default rules are documented.
 
 ## Backlog / Future
 

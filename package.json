@@ -4,7 +4,7 @@
   "description": "CLI-focused War card game with deterministic engine and simulation tooling.",
   "license": "MIT",
   "type": "module",
-  "private": true,
+  "private": false,
   "bin": {
     "war": "dist/index.js"
   },
@@ -14,6 +14,7 @@
     "dev": "tsx src/index.ts play",
     "simulate": "tsx src/index.ts simulate",
     "build": "tsc -p tsconfig.json",
+    "prepare": "tsc -p tsconfig.json",
     "test": "vitest",
     "lint": "eslint . --ext .ts",
     "format": "prettier --check ."
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/seedrandom": "^3.0.5",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.57.0",
