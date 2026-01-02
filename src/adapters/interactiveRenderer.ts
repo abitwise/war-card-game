@@ -98,11 +98,11 @@ export const renderStats = (state: GameState, output: Output = console.log) => {
 export const renderHelp = (autoplay: boolean, output: Output = console.log) => {
   output('');
   output('Controls:');
-  output('- Enter: play next round');
-  output(`- a: toggle autoplay (${autoplay ? 'on' : 'off'})`);
-  output('- s: show stats');
-  output('- q: quit');
-  output('- ?: help');
+  output('| Enter: play next round |');
+  output(`| a: toggle autoplay (${autoplay ? 'on' : 'off'}) |`);
+  output('| s: show stats |');
+  output('| q: quit |');
+  output('| ?: help |');
 };
 
 export const renderIntro = (seed: string, state: GameState, output: Output = console.log, autoplay = false) => {
