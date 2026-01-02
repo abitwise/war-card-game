@@ -1,10 +1,15 @@
 import { Command } from 'commander';
+import { playInteractiveGame } from '../play/session.js';
 
 export const createPlayCommand = (): Command => {
   return new Command('play')
     .description('Interactive War game (player vs CPU).')
-    .action(() => {
-      // Placeholder implementation until P1-6.
-      console.log('Interactive play is not implemented yet. Stay tuned!');
+    .option('--seed <seed>', 'Seed for deterministic play.', 'interactive')
+    .option('--autoplay', 'Start the game in autoplay mode.')
+    .action(async (options: { seed: string; autoplay?: boolean }) => {
+      await playInteractiveGame({
+        seed: options.seed,
+        startAutoplay: Boolean(options.autoplay),
+      });
     });
 };

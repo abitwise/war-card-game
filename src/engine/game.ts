@@ -20,7 +20,7 @@ export type GameRunResult = {
   events: RoundEvent[];
 };
 
-const initializeGame = (options: RunGameOptions): { state: GameState; rng: RNG } => {
+export const createGame = (options: RunGameOptions): { state: GameState; rng: RNG } => {
   const rng = createSeededRng(options.seed);
   const config = validateWarRules(options.rules);
   const deck = shuffleDeck(createDeck(config.numDecks), rng);
@@ -36,7 +36,7 @@ const initializeGame = (options: RunGameOptions): { state: GameState; rng: RNG }
 };
 
 export const runGame = (options: RunGameOptions): GameRunResult => {
-  const { rng, state: initialState } = initializeGame(options);
+  const { rng, state: initialState } = createGame(options);
   const events: RoundEvent[] = [];
 
   let state = initialState;

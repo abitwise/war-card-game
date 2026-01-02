@@ -68,7 +68,7 @@
   - [x] Add tests for argument parsing and deterministic results.
 
 ### [P1-6] Interactive Play CLI
-- Status: Backlog
+- Status: Done
 - Summary: Add `war play` interactive mode with default player-vs-CPU and `@inquirer/prompts`.
 - Context: Primary user-facing experience.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -77,9 +77,9 @@
   - Controls: Enter (next), a (autoplay), s (stats), q (quit), ? (help).
   - Render events clearly; consider `chalk` for emphasis.
 - Tasks:
-  - [ ] Wire prompts to engine steps.
-  - [ ] Add renderer for per-round output.
-  - [ ] Add smoke tests or snapshot coverage for CLI output.
+  - [x] Wire prompts to engine steps.
+  - [x] Add renderer for per-round output.
+  - [x] Add smoke tests or snapshot coverage for CLI output.
 
 ### [P1-7] Packaging and Docs
 - Status: Backlog
