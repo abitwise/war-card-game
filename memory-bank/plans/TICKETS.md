@@ -30,7 +30,7 @@
   - [x] Add tests for uniqueness and deterministic ordering.
 
 ### [P1-3] Game State and Rules Model
-- Status: Backlog
+- Status: Done
 - Summary: Define War rules/config, game state shape, and defaults.
 - Context: Needed for engine consistency and CLI option mapping.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -38,8 +38,8 @@
 - Technical notes:
   - Include tieResolution option (`standard-war` vs `sudden-death`), collect mode, max rounds.
 - Tasks:
-  - [ ] Implement `WarRules`, `GameState`, `PlayerState`, `TableState`.
-  - [ ] Provide defaults and validation (zod optional).
+  - [x] Implement `WarRules`, `GameState`, `PlayerState`, `TableState`.
+  - [x] Provide defaults and validation (zod optional).
 
 ### [P1-4] Round Resolution Engine
 - Status: Backlog
