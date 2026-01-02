@@ -26,8 +26,19 @@ war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>]
 
 - Default seed: `interactive` (use `--seed` to reproduce a game).
 - Controls: `Enter` (next round), `a` (toggle autoplay bursts), `s` (stats), `q` (quit), `?` (help).
-- `--ui prompt` uses the existing prompt-based flow (default). `--ui ink` enables a live Ink TUI that updates stats/events without prompts while honoring the same controls and autoplay bursts.
 - Output shows per-round events, wars, pile recycling, and game end reasons (win/timeout/stalemate).
+
+**UI modes (Ticket F1-1 – Enhanced TUI with Ink)**
+
+- `--ui prompt` (default): step with prompts; best for learners who want to advance round-by-round.
+- `--ui ink`: live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
+- Example: `war play --ui ink --seed demo --autoplay` launches the Ink view with a reproducible game and autoplay engaged from the start.
+
+**Play flow for new users**
+
+1) Run the command above with your preferred `--ui` mode. 2) Press `Enter` to advance or `a` to let autoplay run bursts. 3) Press `s` anytime for stats or `?` to recap controls.
+
+> Documentation specialist: please review this UI section to ensure it’s understandable for an average CLI user. Simplifications welcome.
 
 ### Simulations
 
