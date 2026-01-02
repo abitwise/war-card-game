@@ -9,6 +9,8 @@
 ## Where to Look
 - **Business rules:** `memory-bank/PRODUCT.md`, `memory-bank/ARCHITECTURE.md`, `memory-bank/LONG_TERM_MEMORY.md`.
 - **API/contracts:** Future CLI commands and engine interfaces planned in `memory-bank/ARCHITECTURE.md`.
+- **Contribution basics:** `memory-bank/CONTRIBUTING.md` (local setup, testing commands, coding style).
+- **Plans and tickets:** `memory-bank/plans/` for phase plan and ticket backlog.
 - **Tests:** None yet; future tests should live under `test/`.
 
 ## Agent Checklist (before PR)
