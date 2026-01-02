@@ -37,7 +37,7 @@ const parseAction = (value: string): PromptAction => {
 
 const defaultPrompt: PromptHandler = async (context) => {
   const value = await input({
-    message: `Press Enter for next round | a toggle autoplay (${context.autoplay ? 'on' : 'off'}) | s stats | q quit | ? help`,
+    message: `Press Enter for next round | a: toggle autoplay (${context.autoplay ? 'on' : 'off'}) | s: stats | q: quit | ?: help`,
   });
   return parseAction(value ?? '');
 };
@@ -75,7 +75,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
   while (state.active) {
     if (autoplay && state.active) {
       let roundsPlayed = 0;
-      while (autoplay && state.active && roundsPlayed < autoplayBurst) {
+      while (state.active && roundsPlayed < autoplayBurst) {
         const result = playRoundAndRender(state, rng, output);
         state = result.state;
         roundsPlayed += 1;
@@ -108,7 +108,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
     state = result.state;
   }
 
-  if (!state.active && state.winner === undefined) {
+  if (!state.active) {
     renderStats(state, output);
   }
 
