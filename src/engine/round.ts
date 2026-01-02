@@ -6,7 +6,7 @@ export type RoundEvent =
   | { type: 'RoundStarted'; round: number }
   | { type: 'CardsPlaced'; cards: TableCard[] }
   | { type: 'WarStarted'; warLevel: number }
-  | { type: 'RecyclePile'; playerId: number; cards: number; shuffled: boolean }
+  | { type: 'PileRecycled'; playerId: number; cards: number; shuffled: boolean }
   | { type: 'TrickWon'; winner: number; collected: TableCard[] }
   | { type: 'GameEnded'; reason: 'win' | 'timeout' | 'stalemate'; winner?: number };
 
@@ -39,7 +39,7 @@ const recycleIfNeeded = (state: GameState, playerId: number, rng: RNG, events: R
   player.wonPile = [];
   player.drawPile = recycled;
   events.push({
-    type: 'RecyclePile',
+    type: 'PileRecycled',
     playerId,
     cards: recycled.length,
     shuffled: state.config.shuffleWonPileOnRecycle,
@@ -129,8 +129,6 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
     return { state, events };
   }
 
-  let lastFaceUpA = initialA;
-  let lastFaceUpB = initialB;
   let roundWinner: number | undefined = determineRoundWinner(initialA, initialB);
 
   while (roundWinner === undefined) {
@@ -146,8 +144,6 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
         roundWinner = nextA ? 0 : nextB ? 1 : undefined;
         break;
       }
-      lastFaceUpA = nextA;
-      lastFaceUpB = nextB;
       roundWinner = determineRoundWinner(nextA, nextB);
       continue;
     }
@@ -158,8 +154,6 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
       roundWinner = warA ? 0 : warB ? 1 : undefined;
       break;
     }
-    lastFaceUpA = warA;
-    lastFaceUpB = warB;
     roundWinner = determineRoundWinner(warA, warB);
   }
 

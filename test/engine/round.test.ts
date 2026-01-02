@@ -65,7 +65,7 @@ describe('playRound - wars and edge cases', () => {
 
     const { state: next, events } = playRound(state, createSeededRng('recycle'));
 
-    expect(events.some((e) => e.type === 'RecyclePile' && e.playerId === 0)).toBe(true);
+    expect(events.some((e) => e.type === 'PileRecycled' && e.playerId === 0)).toBe(true);
     expect(next.players[0].wonPile).toHaveLength(2);
     expect(next.players[0].drawPile.length).toBe(0);
   });
