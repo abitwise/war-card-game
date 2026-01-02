@@ -273,11 +273,29 @@ const InkPlayApp = ({
   }, [appendLog, nextKey, startAutoplay]);
 
   useEffect(() => {
-    if (!autoplay || !renderState.active || completedRef.current) {
+    if (!autoplay || completedRef.current) {
       return;
     }
-    playRounds(autoplayBurst);
-  }, [autoplay, autoplayBurst, playRounds, renderState]);
+
+    let cancelled = false;
+
+    const runBurst = () => {
+      if (cancelled || completedRef.current || !stateRef.current.active) {
+        return;
+      }
+      playRounds(autoplayBurst);
+      if (!cancelled && !completedRef.current && stateRef.current.active && autoplay) {
+        setTimeout(runBurst, 0);
+      }
+    };
+
+    const timerId = setTimeout(runBurst, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+    };
+  }, [autoplay, autoplayBurst, playRounds]);
 
   useInput((input, key) => {
     if (key.return) {
