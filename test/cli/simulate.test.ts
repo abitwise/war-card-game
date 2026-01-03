@@ -49,6 +49,27 @@ describe('runSimulations', () => {
     });
   });
 
+  it('handles filenames without extensions in sampled mode', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'war-sampled-trace-'));
+    const basePath = join(dir, 'tracefile');
+
+    runSimulations({
+      games: 2,
+      seedBase: 'no-ext-test',
+      trace: {
+        filePath: basePath,
+        mode: 'sampled',
+        sampleRate: 1.0,
+        includeSnapshots: false,
+        includeTopCards: false,
+      },
+    });
+
+    // Should append suffix even without extension
+    expect(existsSync(join(dir, 'tracefile-game1'))).toBe(true);
+    expect(existsSync(join(dir, 'tracefile-game2'))).toBe(true);
+  });
+
   it('validates trace-game-index is within range', async () => {
     const command = createSimulateCommand().exitOverride();
 

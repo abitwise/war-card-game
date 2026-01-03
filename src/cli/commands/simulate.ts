@@ -149,9 +149,11 @@ export const runSimulations = (options: {
           // In sampled mode, append game index to filename to avoid multiple meta records in one file
           let traceFilePath = traceConfig.filePath;
           if (traceConfig.mode === 'sampled') {
-            const extIndex = traceFilePath.lastIndexOf('.');
-            if (extIndex > 0) {
-              traceFilePath = `${traceFilePath.slice(0, extIndex)}-game${i + 1}${traceFilePath.slice(extIndex)}`;
+            const lastSlash = Math.max(traceFilePath.lastIndexOf('/'), traceFilePath.lastIndexOf('\\'));
+            const lastDot = traceFilePath.lastIndexOf('.');
+            // Only split on extension if dot comes after the last path separator and is not the first char
+            if (lastDot > lastSlash && lastDot > 0) {
+              traceFilePath = `${traceFilePath.slice(0, lastDot)}-game${i + 1}${traceFilePath.slice(lastDot)}`;
             } else {
               traceFilePath = `${traceFilePath}-game${i + 1}`;
             }
