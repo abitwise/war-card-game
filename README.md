@@ -74,6 +74,9 @@ war simulate [--games <count>] [--seed <seedBase>] [--json | --csv]
   - Meta: `{ type: "meta", version, engineVersion, timestamp, seed, rules, cliArgs, players, maxRounds }`
   - Events: `{ type: "event", round, event: <RoundEvent> }`
   - Snapshots (when enabled): `{ type: "snapshot", round, pileCounts, topCards? }`
+- In `war play` and `war simulate --trace-mode single`, the trace file contains one game: a single meta record followed by that game's events (and snapshots, if enabled).
+- In `war simulate --trace-mode sampled`, each sampled game writes to a separate file. The `--trace` path is used as a base, and each traced game appends its game index to the filename (e.g., `out/games-game5.jsonl`, `out/games-game12.jsonl`).
+- Use `--trace-sample-rate 0` to trace no games (useful for dry runs or validation).
 - Traces stream directly to disk—no full in-memory history—making them safe for large simulation batches.
 
 ## Determinism & Seeding

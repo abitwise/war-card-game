@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createSimulateCommand, runSimulations } from '../../src/cli/commands/simulate.js';
 
@@ -8,6 +11,83 @@ describe('runSimulations', () => {
 
     expect(first.runs.map((run) => run.seed)).toEqual(['cli-seed-1', 'cli-seed-2']);
     expect(second).toEqual(first);
+  });
+
+  it('writes separate files for each traced game in sampled mode', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'war-sampled-trace-'));
+    const basePath = join(dir, 'games.jsonl');
+
+    runSimulations({
+      games: 5,
+      seedBase: 'sampled-test',
+      trace: {
+        filePath: basePath,
+        mode: 'sampled',
+        sampleRate: 1.0, // Trace all games to ensure we get multiple files
+        includeSnapshots: false,
+        includeTopCards: false,
+      },
+    });
+
+    // Check that separate files were created for each game
+    const expectedFiles = [
+      join(dir, 'games-game1.jsonl'),
+      join(dir, 'games-game2.jsonl'),
+      join(dir, 'games-game3.jsonl'),
+      join(dir, 'games-game4.jsonl'),
+      join(dir, 'games-game5.jsonl'),
+    ];
+
+    expectedFiles.forEach((filePath) => {
+      expect(existsSync(filePath)).toBe(true);
+      const content = readFileSync(filePath, 'utf8');
+      const lines = content.trim().split('\n');
+      expect(lines.length).toBeGreaterThan(0);
+      const meta = JSON.parse(lines[0]);
+      expect(meta.type).toBe('meta');
+      expect(meta.seed).toMatch(/^sampled-test-\d+$/);
+    });
+  });
+
+  it('validates trace-game-index is within range', async () => {
+    const command = createSimulateCommand().exitOverride();
+
+    await expect(
+      command.parseAsync(
+        ['node', 'war', 'simulate', '--games', '10', '--trace', 'out.jsonl', '--trace-game-index', '15'],
+        { from: 'user' },
+      ),
+    ).rejects.toThrow(/trace-game-index must be an integer between 1 and 10/);
+  });
+
+  it('allows sample rate of 0', async () => {
+    const command = createSimulateCommand().exitOverride();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const dir = mkdtempSync(join(tmpdir(), 'war-zero-rate-'));
+    const tracePath = join(dir, 'games.jsonl');
+
+    await command.parseAsync(
+      [
+        'node',
+        'war',
+        'simulate',
+        '--games',
+        '5',
+        '--trace',
+        tracePath,
+        '--trace-mode',
+        'sampled',
+        '--trace-sample-rate',
+        '0',
+      ],
+      { from: 'user' },
+    );
+
+    // Should not create any trace files when sample rate is 0
+    expect(existsSync(tracePath)).toBe(false);
+    expect(existsSync(join(dir, 'games-game1.jsonl'))).toBe(false);
+
+    logSpy.mockRestore();
   });
 });
 
