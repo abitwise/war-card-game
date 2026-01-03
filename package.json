@@ -15,6 +15,7 @@
     "simulate": "tsx src/index.ts simulate",
     "build": "tsc -p tsconfig.json",
     "prepare": "tsc -p tsconfig.json",
+    "postinstall": "node scripts/ensure-war-bin.mjs",
     "test": "vitest",
     "lint": "eslint . --ext .ts",
     "format": "prettier --check ."

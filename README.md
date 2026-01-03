@@ -7,7 +7,7 @@ Deterministic, event-driven War card game with both interactive play and batch s
 Prerequisites: Node 20+, pnpm (or npm).
 
 ```bash
-pnpm install          # Installs dependencies and builds to dist/ via prepare
+pnpm install          # Installs dependencies, builds to dist/ via prepare, and links the local war bin for pnpm exec
 pnpm dev              # Start interactive play in dev mode (tsx)
 # or use the compiled bin after build/prepare:
 pnpm exec war play    # Interactive play (player vs CPU)
