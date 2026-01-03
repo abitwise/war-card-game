@@ -29,7 +29,8 @@ async function ensureWarBin() {
   const unixShim = `#!/usr/bin/env node\nimport '${pathToFileURL(distEntrypoint).href}';\n`;
   await fs.writeFile(path.join(binDir, 'war'), unixShim, { mode: 0o755 });
 
-  const windowsShim = `@ECHO off\r\nnode "%~dp0\\..\\dist\\index.js" %*\r\n`;
+  const windowsPath = distEntrypoint.replace(/\\/g, '\\\\');
+  const windowsShim = `@ECHO off\r\nnode "${windowsPath}" %*\r\n`;
   await fs.writeFile(path.join(binDir, 'war.cmd'), windowsShim, { mode: 0o755 });
 
   console.log('Linked local "war" bin for pnpm exec.');
