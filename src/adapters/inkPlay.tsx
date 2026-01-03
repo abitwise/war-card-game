@@ -2,7 +2,7 @@ import React, { Fragment, type ComponentProps, useCallback, useEffect, useMemo, 
 import type { RenderOptions } from 'ink';
 import { Box, Newline, Text, render, useApp, useInput } from 'ink';
 import { createGame } from '../engine/game.js';
-import type { RoundEvent } from '../engine/round.js';
+import type { RoundEvent, RoundResult } from '../engine/round.js';
 import { playRound } from '../engine/round.js';
 import type { WarRulesInput } from '../engine/rules.js';
 import type { GameState, TableCard } from '../engine/state.js';
@@ -173,6 +173,8 @@ type InkPlayProps = {
   playerNames?: string[];
   quiet?: boolean;
   onComplete?: (state: GameState) => void;
+  onGameStart?: (state: GameState) => void;
+  onRoundComplete?: (result: RoundResult) => void;
 };
 
 const InkPlayApp = ({
@@ -183,6 +185,8 @@ const InkPlayApp = ({
   autoplayBurst = 5,
   quiet,
   onComplete,
+  onGameStart,
+  onRoundComplete,
 }: InkPlayProps) => {
   const { exit } = useApp();
   const { state: initialState, rng } = useMemo(
@@ -198,6 +202,10 @@ const InkPlayApp = ({
     keyCounter.current += 1;
     return `log-${keyCounter.current}`;
   }, []);
+
+  useEffect(() => {
+    onGameStart?.(initialState);
+  }, [initialState, onGameStart]);
 
   const [renderState, setRenderState] = useState<GameState>(initialState);
   const [autoplay, setAutoplay] = useState<boolean>(startAutoplay ?? false);
@@ -245,6 +253,7 @@ const InkPlayApp = ({
       for (let i = 0; i < count && state.active; i += 1) {
         const result = playRound(state, rngRef.current);
         state = result.state;
+        onRoundComplete?.(result);
         batchedEntries.push(...formatRoundEvents(result.events, result.state, nextKey));
       }
       appendLog(batchedEntries);
@@ -368,6 +377,8 @@ export type InkPlayOptions = {
   renderOptions?: RenderOptions;
   quiet?: boolean;
   headless?: boolean;
+  onGameStart?: (state: GameState) => void;
+  onRoundComplete?: (result: RoundResult) => void;
 };
 
 export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameState> => {
@@ -377,9 +388,11 @@ export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameStat
       rules: options.rules,
       playerNames: options.playerNames,
     });
+    options.onGameStart?.(initialState);
     let state = initialState;
     while (state.active) {
       const result = playRound(state, rng);
+      options.onRoundComplete?.(result);
       state = result.state;
     }
     return state;
@@ -398,6 +411,8 @@ export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameStat
       startAutoplay={options.startAutoplay}
       autoplayBurst={options.autoplayBurst}
       quiet={options.quiet}
+      onGameStart={options.onGameStart}
+      onRoundComplete={options.onRoundComplete}
       onComplete={resolveState}
     />,
     options.renderOptions,

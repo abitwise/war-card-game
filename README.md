@@ -46,8 +46,8 @@ war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>]
 
 **UI modes (Ticket F1-1 – Enhanced TUI with Ink)**
 
-- `--ui ink` (default): live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
-- `--ui prompt`: step with prompts; best for learners who want to advance round-by-round.
+- `--ui prompt` (default): step with prompts; best for learners who want to advance round-by-round.
+- `--ui ink`: live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
 - Example: `war play --ui ink --seed demo --autoplay` launches the Ink view with a reproducible game and autoplay engaged from the start.
 
 **Play flow for new users**
@@ -65,6 +65,16 @@ war simulate [--games <count>] [--seed <seedBase>] [--json | --csv]
 - Defaults: `--games 1`, `--seed base`.
 - `--json` prints a structured summary; `--csv` prints a metric/value table. Use only one of these flags at a time.
 - Reports wins per player, timeouts, stalemates, average rounds, and average wars. Per-game seeds derive from `<seedBase>-<index>`.
+
+### Tracing (JSONL)
+
+- Record interactive games: `war play --trace out/game.jsonl [--trace-snapshots] [--trace-top-cards]`.
+- Record simulations: `war simulate --trace out/games.jsonl [--trace-mode single|sampled] [--trace-game-index 3 | --trace-sample-rate 0.05] [--trace-snapshots] [--trace-top-cards]`.
+- Format: JSONL with a meta header followed by round-ordered records:
+  - Meta: `{ type: "meta", version, engineVersion, timestamp, seed, rules, cliArgs, players, maxRounds }`
+  - Events: `{ type: "event", round, event: <RoundEvent> }`
+  - Snapshots (when enabled): `{ type: "snapshot", round, pileCounts, topCards? }`
+- Traces stream directly to disk—no full in-memory history—making them safe for large simulation batches.
 
 ## Determinism & Seeding
 

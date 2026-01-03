@@ -43,4 +43,26 @@ describe('simulate command', () => {
       /positive integer/,
     );
   });
+
+  it('validates trace sampling arguments', async () => {
+    const command = createSimulateCommand().exitOverride();
+
+    await expect(
+      command.parseAsync(
+        ['node', 'war', 'simulate', '--games', '1', '--trace-mode', 'sampled', '--trace', 'out.jsonl'],
+        { from: 'user' },
+      ),
+    ).rejects.toThrow(/trace-sample-rate/);
+  });
+
+  it('requires snapshots when requesting top-card traces', async () => {
+    const command = createSimulateCommand().exitOverride();
+
+    await expect(
+      command.parseAsync(
+        ['node', 'war', 'simulate', '--games', '1', '--trace', 'out.jsonl', '--trace-top-cards'],
+        { from: 'user' },
+      ),
+    ).rejects.toThrow(/trace-top-cards requires --trace-snapshots/);
+  });
 });
