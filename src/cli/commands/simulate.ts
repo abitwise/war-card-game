@@ -1,4 +1,5 @@
 import { Command, InvalidArgumentError } from 'commander';
+import { dirname, extname, basename } from 'node:path';
 import { runGame } from '../../engine/game.js';
 import { createSeededRng } from '../../engine/rng.js';
 import type { RoundResult } from '../../engine/round.js';
@@ -138,31 +139,24 @@ export const runSimulations = (options: {
     const endingReasons: SimulationRun['reason'][] = [];
     const onGameStart = traceThisGame
       ? (state: GameState) => {
-          if (!traceConfig) {
-            throw new Error('Trace config is required when tracing is enabled');
-          }
           const meta = createTraceMeta({
             seed,
             state,
             cliArgs: { ...cliArgs, gameIndex: i + 1 },
           });
           // In sampled mode, append game index to filename to avoid multiple meta records in one file
-          let traceFilePath = traceConfig.filePath;
-          if (traceConfig.mode === 'sampled') {
-            const lastSlash = Math.max(traceFilePath.lastIndexOf('/'), traceFilePath.lastIndexOf('\\'));
-            const lastDot = traceFilePath.lastIndexOf('.');
-            // Only split on extension if dot comes after the last path separator and is not the first char
-            if (lastDot > lastSlash && lastDot > 0) {
-              traceFilePath = `${traceFilePath.slice(0, lastDot)}-game${i + 1}${traceFilePath.slice(lastDot)}`;
-            } else {
-              traceFilePath = `${traceFilePath}-game${i + 1}`;
-            }
+          let traceFilePath = traceConfig!.filePath;
+          if (traceConfig!.mode === 'sampled') {
+            const ext = extname(traceFilePath);
+            const base = basename(traceFilePath, ext);
+            const dir = dirname(traceFilePath);
+            traceFilePath = `${dir}/${base}-game${i + 1}${ext}`;
           }
           writer = new TraceWriter(
             {
               filePath: traceFilePath,
-              includeSnapshots: traceConfig.includeSnapshots,
-              includeTopCards: traceConfig.includeTopCards,
+              includeSnapshots: traceConfig!.includeSnapshots,
+              includeTopCards: traceConfig!.includeTopCards,
             },
             meta,
           );
