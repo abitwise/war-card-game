@@ -46,8 +46,8 @@ war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>]
 
 **UI modes (Ticket F1-1 – Enhanced TUI with Ink)**
 
-- `--ui prompt` (default): step with prompts; best for learners who want to advance round-by-round.
-- `--ui ink`: live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
+- `--ui ink` (default): live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
+- `--ui prompt`: step with prompts; best for learners who want to advance round-by-round.
 - Example: `war play --ui ink --seed demo --autoplay` launches the Ink view with a reproducible game and autoplay engaged from the start.
 
 **Play flow for new users**

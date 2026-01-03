@@ -24,23 +24,21 @@ describe('createPlayCommand', () => {
     vi.resetModules();
   });
 
-  it('uses the prompt-based interactive UI by default', async () => {
+  it('uses the ink UI by default', async () => {
     const command = createPlayCommand().exitOverride();
     await parseCommand(command, ['--seed', 'default-seed']);
 
-    const { playInteractiveGame } = await import('../../src/cli/play/session.js');
-    expect(playInteractiveGame).toHaveBeenCalledWith(
-      expect.objectContaining({ seed: 'default-seed', startAutoplay: false }),
-    );
+    const { runInkPlay } = await import('../../src/adapters/inkPlay.js');
+    expect(runInkPlay).toHaveBeenCalledWith(expect.objectContaining({ seed: 'default-seed', startAutoplay: false }));
   });
 
-  it('routes to the ink UI when requested', async () => {
+  it('routes to the prompt UI when requested', async () => {
     const command = createPlayCommand().exitOverride();
-    await parseCommand(command, ['--ui', 'ink', '--seed', 'ink-seed', '--autoplay']);
+    await parseCommand(command, ['--ui', 'prompt', '--seed', 'prompt-seed', '--autoplay']);
 
-    const { runInkPlay } = await import('../../src/adapters/inkPlay.js');
-    expect(runInkPlay).toHaveBeenCalledWith(
-      expect.objectContaining({ seed: 'ink-seed', startAutoplay: true }),
+    const { playInteractiveGame } = await import('../../src/cli/play/session.js');
+    expect(playInteractiveGame).toHaveBeenCalledWith(
+      expect.objectContaining({ seed: 'prompt-seed', startAutoplay: true }),
     );
   });
 

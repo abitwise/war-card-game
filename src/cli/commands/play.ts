@@ -19,14 +19,14 @@ export const createPlayCommand = (): Command => {
     .description('Interactive War game (player vs CPU).')
     .option('--seed <seed>', 'Seed for deterministic play.', 'interactive')
     .option('--autoplay', 'Start the game in autoplay mode.')
-    .option('--ui <mode>', 'UI mode to use (ink | prompt).', 'prompt')
+    .option('--ui <mode>', 'UI mode to use (ink | prompt).', 'ink')
     .option('--trace <file>', 'Write a JSONL trace for the game.')
     .option('--trace-snapshots', 'Include per-round snapshots in trace output.')
     .option('--trace-top-cards', 'Include top-card details when snapshots are enabled.')
     .action(async (options: PlayOptions) => {
-      const ui = (options.ui ?? 'prompt').toLowerCase();
+      const ui = (options.ui ?? 'ink').toLowerCase();
       if (ui !== 'prompt' && ui !== 'ink') {
-        command.error('Invalid UI mode. Use "ink" or "prompt".');
+        command.error('Invalid UI mode. Use "ink" (default) or "prompt".');
       }
 
       if (options.traceTopCards && !options.traceSnapshots) {
