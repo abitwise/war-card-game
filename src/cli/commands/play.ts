@@ -13,11 +13,11 @@ export const createPlayCommand = (): Command => {
     .description('Interactive War game (player vs CPU).')
     .option('--seed <seed>', 'Seed for deterministic play.', 'interactive')
     .option('--autoplay', 'Start the game in autoplay mode.')
-    .option('--ui <mode>', 'UI mode to use (prompt | ink).', 'prompt')
+    .option('--ui <mode>', 'UI mode to use (ink | prompt).', 'ink')
     .action(async (options: PlayOptions) => {
-      const ui = (options.ui ?? 'prompt').toLowerCase();
+      const ui = (options.ui ?? 'ink').toLowerCase();
       if (ui !== 'prompt' && ui !== 'ink') {
-        command.error('Invalid UI mode. Use "prompt" (default) or "ink".');
+        command.error('Invalid UI mode. Use "ink" (default) or "prompt".');
       }
 
       if (ui === 'ink') {

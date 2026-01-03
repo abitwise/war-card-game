@@ -4,7 +4,7 @@ Deterministic, event-driven War card game with both interactive play and batch s
 
 ## Quickstart
 
-Prerequisites: Node 20+, pnpm (or npm).
+Prerequisites: Node 20+ ([install guides](https://nodejs.org/en/download/package-manager)), pnpm ([install docs](https://pnpm.io/installation)) or npm.
 
 ```bash
 pnpm install          # Installs dependencies, builds to dist/ via prepare, and links the local war bin for pnpm exec
@@ -12,6 +12,22 @@ pnpm dev              # Start interactive play in dev mode (tsx)
 # or use the compiled bin after build/prepare:
 pnpm exec war play    # Interactive play (player vs CPU)
 pnpm exec war simulate --games 10 --seed demo --json
+```
+
+Using npm instead of pnpm:
+
+```bash
+npm install
+npm run dev
+npm exec war play
+npm exec war simulate -- --games 10 --seed demo --json
+```
+
+Running the published CLI via `npx`:
+
+```bash
+npx war play
+npx war simulate --games 10 --seed demo --json
 ```
 
 `pnpm build` compiles TypeScript to `dist/`. The `war` bin points to `dist/index.js`, so ensure the build has run (prepare handles this on install/link/publish).
@@ -30,8 +46,8 @@ war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>]
 
 **UI modes (Ticket F1-1 – Enhanced TUI with Ink)**
 
-- `--ui prompt` (default): step with prompts; best for learners who want to advance round-by-round.
-- `--ui ink`: live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
+- `--ui ink` (default): live-updating Ink TUI with the same controls and autoplay bursts, no prompts required. Ideal for watching games run while keeping stats visible.
+- `--ui prompt`: step with prompts; best for learners who want to advance round-by-round.
 - Example: `war play --ui ink --seed demo --autoplay` launches the Ink view with a reproducible game and autoplay engaged from the start.
 
 **Play flow for new users**
