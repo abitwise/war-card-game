@@ -1,5 +1,5 @@
 import { Command, InvalidArgumentError } from 'commander';
-import { dirname, extname, basename } from 'node:path';
+import { dirname, extname, basename, join } from 'node:path';
 import { runGame } from '../../engine/game.js';
 import { createSeededRng } from '../../engine/rng.js';
 import type { RoundResult } from '../../engine/round.js';
@@ -139,24 +139,26 @@ export const runSimulations = (options: {
     const endingReasons: SimulationRun['reason'][] = [];
     const onGameStart = traceThisGame
       ? (state: GameState) => {
+          // traceConfig is guaranteed to be defined when traceThisGame is true
+          const config = traceConfig!;
           const meta = createTraceMeta({
             seed,
             state,
             cliArgs: { ...cliArgs, gameIndex: i + 1 },
           });
           // In sampled mode, append game index to filename to avoid multiple meta records in one file
-          let traceFilePath = traceConfig!.filePath;
-          if (traceConfig!.mode === 'sampled') {
+          let traceFilePath = config.filePath;
+          if (config.mode === 'sampled') {
             const ext = extname(traceFilePath);
             const base = basename(traceFilePath, ext);
             const dir = dirname(traceFilePath);
-            traceFilePath = `${dir}/${base}-game${i + 1}${ext}`;
+            traceFilePath = join(dir, `${base}-game${i + 1}${ext}`);
           }
           writer = new TraceWriter(
             {
               filePath: traceFilePath,
-              includeSnapshots: traceConfig!.includeSnapshots,
-              includeTopCards: traceConfig!.includeTopCards,
+              includeSnapshots: config.includeSnapshots,
+              includeTopCards: config.includeTopCards,
             },
             meta,
           );
