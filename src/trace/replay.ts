@@ -258,7 +258,13 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
   for (const round of rounds) {
     if (round < from || round > to) continue;
     const roundEvents = grouped.get(round) ?? [];
-    const state = resultByRound.get(round)?.state ?? fallbackState;
+    let state;
+    if (resultByRound.has(round)) {
+      state = resultByRound.get(round)!.state;
+    } else {
+      output(chalk.yellow(`Warning: no RoundResult found for round ${round}; using fallback final state for rendering.`));
+      state = fallbackState;
+    }
     renderRoundEvents(roundEvents, state, output, verbosity);
     if (options.pauseOnWar) {
       for (const event of roundEvents) {
