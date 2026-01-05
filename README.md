@@ -73,9 +73,8 @@ war simulate [--games <count>] [--seed <seedBase>] [--json | --csv | --md] [--hi
   - `--json` → structured summary (percentiles, war depth distribution, interesting moments, histograms, per-game runs).
   - `--csv` → metric/value table (wins, stats, histograms, interesting moments).
   - `--md` → Markdown table + “Interesting Moments” section (optionally includes histograms when combined with `--hist`).
-- Text output (default) includes per-game averages, round percentiles (p50/p90/p99), war depth distribution, lead changes/recycles, “Interesting moments” (top 3 longest games, deepest wars, biggest swings), and optional ASCII histograms with `--hist`.
-- Per-game seeds derive from `<seedBase>-<index>`; stats stay deterministic for a given seed base.
-- Trace flags mirror `war play` (see “Simulation visibility” below) so batches can emit JSONL traces without loading full histories into memory.
+- Text output (default) includes per-game averages, round percentiles (p50/p90/p99), war depth distribution, lead changes/recycles, “Interesting moments” (top 3 longest games, deepest wars, biggest swings), and optional ASCII histograms with `--hist`. Per-game seeds derive from `<seedBase>-<index>`; stats stay deterministic for a given seed base.
+- Trace flags mirror `war play` (see “Simulation visibility” below) so batches can emit JSONL traces without loading full game histories into memory.
 - Example (text + histograms):
 
 ```
