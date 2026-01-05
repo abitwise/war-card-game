@@ -134,11 +134,14 @@ export const playRound = (inputState: GameState, rng: RNG, stateHashMode: StateH
   }
   if (!initialA || !initialB) {
     const winner = initialA ? 0 : 1;
+    const collected = [...state.table.battleCards];
     collectCards(state, winner, state.table.battleCards);
     state.round += 1;
     state.winner = winner;
     state.active = false;
-    events.push({ type: 'TrickWon', winner, collected: [...state.table.battleCards] });
+    state.table.battleCards = [];
+    state.table.inWar = false;
+    events.push({ type: 'TrickWon', winner, collected });
     events.push({ type: 'GameEnded', reason: 'win', winner });
     pushHashEvent();
     return { state, events };
