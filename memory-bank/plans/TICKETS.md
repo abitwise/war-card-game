@@ -234,7 +234,7 @@
   - [ ] Add regression tests: fixed seed => expected hash sequence for first N rounds.
 
 ### [P2-7] Docs & Examples Update
-- Status: Backlog
+- Status: Done
 - Summary: Document trace usage, verbosity, playback controls, and stats outputs.
 - Context: Phase 2 adds power features; they must be discoverable.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -247,9 +247,9 @@
     - pause-on-war/speed
     - state hashing + verify
 - Tasks:
-  - [ ] Update README with commands and sample outputs.
-  - [ ] Add example trace file (small) under `examples/` (optional).
-  - [ ] Update any contributor notes for determinism/hashing expectations.
+  - [x] Update README with commands and sample outputs.
+  - [x] Add example trace file (small) under `examples/` (optional).
+  - [x] Update any contributor notes for determinism/hashing expectations.
 
 ### [P2-8] Support 2–4 Players (Default 2)
 - Status: Backlog

@@ -24,6 +24,7 @@
 ## Contribution Rules
 - Prefer pure functions in the engine; keep I/O at the edge.
 - Keep deterministic behaviors intact; changing RNG, shuffling, or ordering requires updating docs/tests.
+- Trace/state hashing changes must stay deterministic: update documentation, sample traces, and replay verification expectations (`--state-hash` + `--verify`) together.
 - Document new rule variants and surface them through CLI options.
 - Keep controllers thin; heavy logic lives in the engine or reusable helpers.
 - When adding features, update `memory-bank/` plans and tickets to stay in sync.
