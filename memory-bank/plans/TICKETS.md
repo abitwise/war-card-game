@@ -173,7 +173,7 @@
   - [ ] Add snapshot/smoke tests for representative outputs.
 
 ### [P2-4] Advanced Simulation Stats (Distributions + Extremes)
-- Status: Backlog
+- Status: Done
 - Summary: Add stats that explain run shape (not only averages) and identify “weird” games.
 - Context: Simulation is the core value; distributions and extremes help interpret behavior.
 - Functional behavior (GIVEN/WHEN/THEN):

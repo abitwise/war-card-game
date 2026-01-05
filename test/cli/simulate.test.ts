@@ -70,6 +70,38 @@ describe('runSimulations', () => {
     expect(existsSync(join(dir, 'tracefile-game2'))).toBe(true);
   });
 
+  it('computes percentiles, distributions, and interesting moments', () => {
+    const summary = runSimulations({ games: 3, seedBase: 'stats-seed' });
+
+    expect(summary.percentiles.rounds.p50).toBe(228);
+    expect(summary.percentiles.rounds.p90).toBeCloseTo(401.6, 3);
+    expect(summary.percentiles.rounds.p99).toBeCloseTo(440.66, 2);
+    expect(summary.warDepthDistribution).toEqual({ 1: 50, 2: 2 });
+    expect(summary.interesting.longestGames[0]).toEqual({
+      gameNumber: 3,
+      seed: 'stats-seed-3',
+      rounds: 445,
+      reason: 'win',
+      winner: 'Player 2',
+    });
+    expect(summary.interesting.deepestWars[0]).toEqual({
+      depth: 2,
+      gameNumber: 2,
+      seed: 'stats-seed-2',
+      round: 49,
+    });
+    expect(summary.interesting.biggestSwings[0]).toEqual({
+      swing: 10,
+      gameNumber: 2,
+      seed: 'stats-seed-2',
+      round: 49,
+    });
+    expect(summary.histograms.rounds[0]).toEqual({ from: 140, to: 170, count: 1 });
+    expect(summary.histograms.wars[summary.histograms.wars.length - 1]).toEqual({ from: 25, to: 25, count: 1 });
+    expect(summary.totals.recycles).toBe(82);
+    expect(summary.totals.leadChanges).toBe(34);
+  });
+
   it('validates trace-game-index is within range', async () => {
     const command = createSimulateCommand().exitOverride();
 
@@ -125,6 +157,7 @@ describe('simulate command', () => {
     const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
     expect(payload.games).toBe(1);
     expect(payload.seedBase).toBe('json-seed');
+    expect(payload.percentiles.rounds.p50).toBeDefined();
 
     logSpy.mockRestore();
   });
@@ -135,6 +168,14 @@ describe('simulate command', () => {
     await expect(
       command.parseAsync(['node', 'war', 'simulate', '--games', '1', '--json', '--csv'], { from: 'user' }),
     ).rejects.toThrow();
+  });
+
+  it('rejects markdown combined with JSON output', async () => {
+    const command = createSimulateCommand().exitOverride();
+
+    await expect(
+      command.parseAsync(['node', 'war', 'simulate', '--games', '1', '--md', '--json'], { from: 'user' }),
+    ).rejects.toThrow(/md cannot be combined/);
   });
 
   it('validates games input', async () => {
@@ -165,5 +206,36 @@ describe('simulate command', () => {
         { from: 'user' },
       ),
     ).rejects.toThrow(/trace-top-cards requires --trace-snapshots/);
+  });
+
+  it('prints histograms when requested', async () => {
+    const command = createSimulateCommand().exitOverride();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await command.parseAsync(
+      ['node', 'war', 'simulate', '--games', '3', '--seed', 'stats-seed', '--hist'],
+      { from: 'user' },
+    );
+
+    const output = logSpy.mock.calls.map((call) => call[0] as string).join('\n');
+    expect(output).toContain('Rounds per game');
+    expect(output).toContain('Wars per game');
+
+    logSpy.mockRestore();
+  });
+
+  it('renders markdown output', async () => {
+    const command = createSimulateCommand().exitOverride();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await command.parseAsync(['node', 'war', 'simulate', '--games', '2', '--seed', 'md-seed', '--md'], {
+      from: 'user',
+    });
+
+    const output = logSpy.mock.calls.map((call) => call[0] as string).join('\n');
+    expect(output).toContain('| Metric | Value |');
+    expect(output).toContain('### Interesting Moments');
+
+    logSpy.mockRestore();
   });
 });
