@@ -151,6 +151,9 @@ export const playRound = (inputState: GameState, rng: RNG, stateHashMode: StateH
     }
   });
 
+  // If all active players fail to draw (exhausted decks), faceUps is empty.
+  // highestRank becomes -Infinity, contenders is empty, roundWinner is undefined,
+  // and we fall through to handleNoContest() below.
   const highestRank = faceUps.reduce((max, entry) => Math.max(max, entry.card.rank), -Infinity);
   const contenders = faceUps.filter((entry) => entry.card.rank === highestRank).map((entry) => entry.playerId);
 
@@ -203,7 +206,7 @@ export const playRound = (inputState: GameState, rng: RNG, stateHashMode: StateH
     .filter((entry) => entry.cards > 0)
     .map((entry) => entry.index);
 
-  if (remainingPlayers.length === 1 && totalCards(state.players[remainingPlayers[0]]) > 0) {
+  if (remainingPlayers.length === 1) {
     state.active = false;
     state.winner = remainingPlayers[0];
     events.push({ type: 'GameEnded', reason: 'win', winner: remainingPlayers[0] });

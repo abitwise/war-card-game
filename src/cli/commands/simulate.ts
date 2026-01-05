@@ -149,6 +149,7 @@ const totalCardsForPlayer = (player: PlayerState): number => player.drawPile.len
 const totalsForPlayers = (state: GameState): number[] => state.players.map((player) => totalCardsForPlayer(player));
 
 const leaderFromTotals = (totals: number[]): number | undefined => {
+  if (totals.length === 0) return undefined;
   const max = Math.max(...totals);
   const leaders = totals
     .map((value, index) => ({ value, index }))
@@ -158,6 +159,7 @@ const leaderFromTotals = (totals: number[]): number | undefined => {
 };
 
 const spreadFromTotals = (totals: number[]): number => {
+  if (totals.length === 0) return 0;
   const max = Math.max(...totals);
   const min = Math.min(...totals);
   return max - min;
