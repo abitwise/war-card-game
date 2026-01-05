@@ -116,7 +116,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
       if (warDetected && pauseOnWar) {
         autoplay = false;
         output('Autoplay paused due to war. Press Enter to continue.');
-      } else if (autoplay && playbackDelayMs > 0) {
+      } else if (playbackDelayMs > 0) {
         await wait(playbackDelayMs);
       }
     }
