@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { Card } from '../engine/cards.js';
+import type { Card, Rank } from '../engine/cards.js';
 import type { RoundEvent } from '../engine/round.js';
 import type { GameState, TableCard } from '../engine/state.js';
 
@@ -51,6 +51,11 @@ const formatCardSequence = (cards: TableCard[], playerId: number): string => {
     .filter((entry) => entry.playerId === playerId)
     .map((entry) => (entry.faceDown ? chalk.gray(FACE_DOWN_SYMBOL) : formatCard(entry.card)));
   return sequence.length > 0 ? sequence.join(', ') : '—';
+};
+
+const getHighestRank = (ranks: (Rank | undefined)[]): Rank | undefined => {
+  const available = ranks.filter((rank): rank is Rank => rank !== undefined);
+  return available.length > 0 ? (Math.max(...available) as Rank) : undefined;
 };
 
 type WarStage = {
@@ -138,14 +143,9 @@ const formatWarSegments = (
   );
 
   const lines: string[] = [];
-  const highestInitial = Math.max(
-    -Infinity,
-    ...structure.participants
-      .map((id) => structure.initial[id]?.card.rank)
-      .filter((rank): rank is number => rank !== undefined),
-  );
+  const highestInitial = getHighestRank(structure.participants.map((id) => structure.initial[id]?.card.rank));
   const initialTied =
-    highestInitial > -Infinity
+    highestInitial !== undefined
       ? structure.participants.filter((id) => structure.initial[id]?.card.rank === highestInitial)
       : [];
 
@@ -162,15 +162,16 @@ const formatWarSegments = (
             return `${playerName(state, id)}: ${card ? formatTableCard(card) : '—'}`;
           });
 
-    const tieLabel = initialTied.length > 1 ? ` ${chalk.yellow(`(tie on ${rankLabel(highestInitial)})`)}` : '';
+    const tieLabel =
+      highestInitial !== undefined && initialTied.length > 1 ? ` ${chalk.yellow(`(tie on ${rankLabel(highestInitial)})`)}` : '';
     const joiner = structure.participants.length === 2 ? ' ' : ' | ';
     lines.push(`Flip: ${initialEntries.join(joiner)}${tieLabel}`);
   }
 
-  let lastTieRank = initialTied.length > 1 ? highestInitial : undefined;
+  let lastTieRank: Rank | undefined = initialTied.length > 1 ? highestInitial : undefined;
 
   structure.wars.forEach((war, index) => {
-    const warLabel = `WAR! (level ${war.level}${lastTieRank ? `, tie on ${rankLabel(lastTieRank)}` : ''})`;
+    const warLabel = `WAR! (level ${war.level}${lastTieRank !== undefined ? `, tie on ${rankLabel(lastTieRank)}` : ''})`;
     lines.push(chalk.redBright(warLabel));
 
     const downSegments = war.participants.map((id) => {
@@ -195,14 +196,8 @@ const formatWarSegments = (
     }
     lines.push(formatParticipantsLine('Up', upSegments));
 
-    const warHighest = Math.max(
-      -Infinity,
-      ...war.participants
-        .map((id) => war.up[id]?.card.rank)
-        .filter((rank): rank is number => rank !== undefined),
-    );
-    const warTied =
-      warHighest > -Infinity ? war.participants.filter((id) => war.up[id]?.card.rank === warHighest) : [];
+    const warHighest = getHighestRank(war.participants.map((id) => war.up[id]?.card.rank));
+    const warTied = warHighest !== undefined ? war.participants.filter((id) => war.up[id]?.card.rank === warHighest) : [];
     lastTieRank = warTied.length > 1 ? warHighest : undefined;
   });
 
