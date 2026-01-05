@@ -1,136 +1,31 @@
-import React, { Fragment, type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RenderOptions } from 'ink';
 import { Box, Newline, Text, render, useApp, useInput } from 'ink';
 import { createGame } from '../engine/game.js';
 import type { RoundEvent, RoundResult } from '../engine/round.js';
 import { playRound } from '../engine/round.js';
 import type { WarRulesInput } from '../engine/rules.js';
-import type { GameState, TableCard } from '../engine/state.js';
+import type { GameState } from '../engine/state.js';
+import { renderRoundEvents, type RendererVerbosity } from './interactiveRenderer.js';
 
 type LogEntry = { key: string; content: React.ReactNode };
 
 const LOG_LIMIT = 50;
 
-const rankLabel = (rank: number): string => {
-  if (rank === 11) return 'J';
-  if (rank === 12) return 'Q';
-  if (rank === 13) return 'K';
-  if (rank === 14) return 'A';
-  return `${rank}`;
-};
-
-const suitColor = (suit: string): ComponentProps<typeof Text>['color'] => {
-  if (suit === '♥' || suit === '♦') {
-    return 'redBright';
-  }
-  return 'blueBright';
-};
-
-const CardText = ({ card, faceDown }: { card: TableCard['card']; faceDown?: boolean }) => {
-  if (faceDown) {
-    return <Text color="gray">??</Text>;
-  }
-  return (
-    <Text color={suitColor(card.suit)}>
-      {rankLabel(card.rank)}
-      {card.suit}
-    </Text>
-  );
-};
-
-const playerName = (state: GameState, playerId: number): string => state.players[playerId]?.name ?? `Player ${playerId + 1}`;
-
-const formatCardsPlaced = (state: GameState, cards: TableCard[], createKey: () => string): LogEntry[] => {
-  const grouped = cards.reduce<Record<number, TableCard[]>>((acc, entry) => {
-    const bucket = acc[entry.playerId] ?? [];
-    bucket.push(entry);
-    acc[entry.playerId] = bucket;
-    return acc;
-  }, {});
-
-  return Object.entries(grouped).map(([id, entries]) => ({
-    key: createKey(),
-    content: (
-      <>
-        <Text bold>{playerName(state, Number.parseInt(id, 10))}</Text>
-        <Text> played: </Text>
-        {entries.map((entry, index) => (
-          <Fragment key={`${entry.playerId}-${index}`}>
-            {index > 0 ? <Text>, </Text> : null}
-            <CardText card={entry.card} faceDown={entry.faceDown} />
-          </Fragment>
-        ))}
-      </>
-    ),
-  }));
-};
-
-const formatRoundEvents = (events: RoundEvent[], state: GameState, createKey: () => string): LogEntry[] => {
-  const entries: LogEntry[] = [];
-
-  events.forEach((event) => {
-    switch (event.type) {
-      case 'RoundStarted':
-        entries.push({
-          key: createKey(),
-          content: (
-            <Text>
-              <Text bold>Round {event.round}</Text>
-            </Text>
-          ),
-        });
-        break;
-      case 'PileRecycled': {
-        const name = playerName(state, event.playerId);
-        const action = event.shuffled ? 'shuffled' : 'recycled';
-        entries.push({
-          key: createKey(),
-          content: (
-            <Text color="yellow">
-              {name} {action} {event.cards} card(s) from the won pile.
-            </Text>
-          ),
-        });
-        break;
-      }
-      case 'WarStarted':
-        entries.push({
-          key: createKey(),
-          content: <Text color="redBright">WAR! (level {event.warLevel})</Text>,
-        });
-        break;
-      case 'CardsPlaced':
-        entries.push(...formatCardsPlaced(state, event.cards, createKey));
-        break;
-      case 'TrickWon': {
-        const name = playerName(state, event.winner);
-        entries.push({
-          key: createKey(),
-          content: (
-            <Text color="greenBright">
-              {name} wins the trick and collects {event.collected.length} card(s).
-            </Text>
-          ),
-        });
-        break;
-      }
-      case 'GameEnded': {
-        const winnerName = event.winner !== undefined ? playerName(state, event.winner) : undefined;
-        let content: React.ReactNode = <Text color="yellow">Game ended in a stalemate.</Text>;
-        if (event.reason === 'timeout') {
-          content = <Text color="yellow">Game ended due to max rounds timeout.</Text>;
-        } else if (event.reason === 'win' && winnerName) {
-          content = <Text color="greenBright">{winnerName} wins the game!</Text>;
-        }
-        entries.push({ key: createKey(), content });
-        break;
-      }
-      default:
-        break;
-    }
-  });
-
-  return entries;
+const formatRoundEvents = (
+  events: RoundEvent[],
+  state: GameState,
+  createKey: () => string,
+  verbosity: RendererVerbosity,
+): LogEntry[] => {
+  const lines: string[] = [];
+  renderRoundEvents(events, state, (line) => lines.push(line), verbosity);
+  return lines
+    .filter((line) => line !== '')
+    .map((line) => ({
+      key: createKey(),
+      content: <Text>{line}</Text>,
+    }));
 };
 
 const formatStats = (state: GameState, createKey: () => string): LogEntry[] => [
@@ -172,6 +67,7 @@ type InkPlayProps = {
   rules?: WarRulesInput;
   playerNames?: string[];
   quiet?: boolean;
+  verbosity?: RendererVerbosity;
   onComplete?: (state: GameState) => void;
   onGameStart?: (state: GameState) => void;
   onRoundComplete?: (result: RoundResult) => void;
@@ -184,6 +80,7 @@ const InkPlayApp = ({
   startAutoplay,
   autoplayBurst = 5,
   quiet,
+  verbosity = 'normal',
   onComplete,
   onGameStart,
   onRoundComplete,
@@ -254,7 +151,7 @@ const InkPlayApp = ({
         const result = playRound(state, rngRef.current);
         state = result.state;
         onRoundComplete?.(result);
-        batchedEntries.push(...formatRoundEvents(result.events, result.state, nextKey));
+        batchedEntries.push(...formatRoundEvents(result.events, result.state, nextKey, verbosity));
       }
       appendLog(batchedEntries);
       stateRef.current = state;
@@ -264,7 +161,7 @@ const InkPlayApp = ({
         completeGame(state);
       }
     },
-    [appendLog, completeGame, nextKey],
+    [appendLog, completeGame, nextKey, onRoundComplete, verbosity],
   );
 
   const toggleAutoplay = useCallback(() => {
@@ -377,6 +274,7 @@ export type InkPlayOptions = {
   renderOptions?: RenderOptions;
   quiet?: boolean;
   headless?: boolean;
+  verbosity?: RendererVerbosity;
   onGameStart?: (state: GameState) => void;
   onRoundComplete?: (result: RoundResult) => void;
 };
@@ -411,6 +309,7 @@ export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameStat
       startAutoplay={options.startAutoplay}
       autoplayBurst={options.autoplayBurst}
       quiet={options.quiet}
+      verbosity={options.verbosity}
       onGameStart={options.onGameStart}
       onRoundComplete={options.onRoundComplete}
       onComplete={resolveState}

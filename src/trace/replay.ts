@@ -1,13 +1,13 @@
 import chalk from 'chalk';
 import { createInterface } from 'node:readline';
-import { formatTableCard } from '../adapters/interactiveRenderer.js';
+import { formatTableCard, renderRoundEvents, type RendererVerbosity } from '../adapters/interactiveRenderer.js';
 import { createGame } from '../engine/game.js';
 import { playRound, type RoundEvent, type RoundResult } from '../engine/round.js';
 import type { TraceEventRecord, TraceMetaRecord } from './trace.js';
 import { readTraceFile, type LoadedTrace } from './reader.js';
 
 export type TraceViewFilter = 'all' | 'wars' | 'wins' | 'recycles';
-export type TraceVerbosity = 'low' | 'normal' | 'high';
+export type TraceVerbosity = RendererVerbosity;
 
 export type TraceViewOptions = {
   from?: number;
@@ -51,15 +51,6 @@ const shouldRenderEvent = (event: RoundEvent, filter: TraceViewFilter): boolean 
   if (filter === 'wins') return event.type === 'TrickWon';
   if (filter === 'recycles') return event.type === 'PileRecycled';
   return false;
-};
-
-const shouldRenderWithVerbosity = (event: RoundEvent, verbosity: TraceVerbosity): boolean => {
-  if (event.type === 'GameEnded') return true;
-  if (event.type === 'RoundStarted') return false;
-  if (verbosity === 'high') return true;
-  if (verbosity === 'normal') return event.type !== 'CardsPlaced';
-  // low verbosity
-  return event.type === 'TrickWon' || event.type === 'WarStarted' || event.type === 'PileRecycled';
 };
 
 const formatCardsPlaced = (players: string[], cards: Extract<RoundEvent, { type: 'CardsPlaced' }>) => {
@@ -134,29 +125,37 @@ const resolveRoundNumber = (result: RoundResult): number => {
   return result.state.round;
 };
 
-const generateEngineEvents = (meta: TraceMetaRecord): TraceEventRecord[] => {
+const generateRoundResults = (meta: TraceMetaRecord): RoundResult[] => {
   const { state: initialState, rng } = createGame({
     seed: meta.seed,
     rules: meta.rules,
     playerNames: meta.players,
   });
 
-  const records: TraceEventRecord[] = [];
+  const results: RoundResult[] = [];
   let state = initialState;
   while (state.active) {
     const result = playRound(state, rng);
+    results.push(result);
+    state = result.state;
+  }
+
+  return results;
+};
+
+const flattenRoundResults = (rounds: RoundResult[]): TraceEventRecord[] => {
+  const records: TraceEventRecord[] = [];
+  rounds.forEach((result) => {
     const round = resolveRoundNumber(result);
     result.events.forEach((event) => {
       records.push({ type: 'event', round, event });
     });
-    state = result.state;
-  }
-
+  });
   return records;
 };
 
-const verifyTraceEvents = (trace: LoadedTrace) => {
-  const generated = generateEngineEvents(trace.meta);
+const verifyTraceEvents = (trace: LoadedTrace, generatedRounds?: RoundResult[]) => {
+  const generated = flattenRoundResults(generatedRounds ?? generateRoundResults(trace.meta));
   if (generated.length !== trace.events.length) {
     throw new Error(`Trace verification failed: expected ${trace.events.length} events, got ${generated.length}.`);
   }
@@ -234,8 +233,9 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
   const output = options.output ?? console.log;
   const verbosity: TraceVerbosity = options.verbosity ?? 'normal';
   const trace = await readTraceFile(filePath);
+  const roundResults = generateRoundResults(trace.meta);
   if (options.verify) {
-    verifyTraceEvents(trace);
+    verifyTraceEvents(trace, roundResults);
     output(chalk.green('Trace verification succeeded.'));
   }
 
@@ -243,6 +243,13 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
   const from = options.from ?? rounds[0] ?? 1;
   const to = options.to ?? rounds[rounds.length - 1] ?? from;
   const grouped = groupEventsByRound(trace.events);
+  const resultByRound = new Map<number, RoundResult>();
+  roundResults.forEach((result) => {
+    resultByRound.set(resolveRoundNumber(result), result);
+  });
+  const seedInitialState = createGame({ seed: trace.meta.seed, rules: trace.meta.rules, playerNames: trace.meta.players }).state;
+  const initialState = roundResults[0]?.state ?? seedInitialState;
+  const fallbackState = roundResults[roundResults.length - 1]?.state ?? initialState;
 
   output(`Replaying trace for seed ${trace.meta.seed}`);
   output(`Players: ${trace.meta.players.join(' vs ')}`);
@@ -250,15 +257,14 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
 
   for (const round of rounds) {
     if (round < from || round > to) continue;
-    output('');
-    output(chalk.bold(`Round ${round}`));
-    const events = grouped.get(round) ?? [];
-    for (const event of events) {
-      if (shouldRenderWithVerbosity(event, verbosity)) {
-        renderEvent(event, trace.meta.players).forEach((line) => output(line));
-      }
-      if (options.pauseOnWar && event.type === 'WarStarted') {
-        await waitForEnter('War detected. Press Enter to continue...');
+    const roundEvents = grouped.get(round) ?? [];
+    const state = resultByRound.get(round)?.state ?? fallbackState;
+    renderRoundEvents(roundEvents, state, output, verbosity);
+    if (options.pauseOnWar) {
+      for (const event of roundEvents) {
+        if (event.type === 'WarStarted') {
+          await waitForEnter('War detected. Press Enter to continue...');
+        }
       }
     }
     if (options.speedMs) {

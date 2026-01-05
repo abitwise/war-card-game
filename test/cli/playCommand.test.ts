@@ -29,7 +29,9 @@ describe('createPlayCommand', () => {
     await parseCommand(command, ['--seed', 'default-seed']);
 
     const { runInkPlay } = await import('../../src/adapters/inkPlay.js');
-    expect(runInkPlay).toHaveBeenCalledWith(expect.objectContaining({ seed: 'default-seed', startAutoplay: false }));
+    expect(runInkPlay).toHaveBeenCalledWith(
+      expect.objectContaining({ seed: 'default-seed', startAutoplay: false, verbosity: 'normal' }),
+    );
   });
 
   it('routes to the prompt UI when requested', async () => {
@@ -38,12 +40,20 @@ describe('createPlayCommand', () => {
 
     const { playInteractiveGame } = await import('../../src/cli/play/session.js');
     expect(playInteractiveGame).toHaveBeenCalledWith(
-      expect.objectContaining({ seed: 'prompt-seed', startAutoplay: true }),
+      expect.objectContaining({ seed: 'prompt-seed', startAutoplay: true, verbosity: 'normal' }),
     );
   });
 
   it('throws on invalid UI option', async () => {
     const command = createPlayCommand().exitOverride();
     await expect(parseCommand(command, ['--ui', 'unknown'])).rejects.toThrow();
+  });
+
+  it('passes verbosity flag through to the renderer', async () => {
+    const command = createPlayCommand().exitOverride();
+    await parseCommand(command, ['--verbosity', 'high']);
+
+    const { runInkPlay } = await import('../../src/adapters/inkPlay.js');
+    expect(runInkPlay).toHaveBeenCalledWith(expect.objectContaining({ verbosity: 'high' }));
   });
 });

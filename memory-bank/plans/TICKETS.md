@@ -153,7 +153,7 @@
   - [x] Add tests: replay/verify passes for fixed seed trace.
 
 ### [P2-3] Renderer Verbosity + “Feel the Battle” Visibility
-- Status: Backlog
+- Status: Done
 - Summary: Improve card visibility with configurable verbosity modes and clearer war/battle presentation.
 - Context: War is fun to watch when you can follow “what happened” and “why”.
 - Functional behavior (GIVEN/WHEN/THEN):

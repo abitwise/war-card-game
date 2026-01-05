@@ -4,6 +4,7 @@ import type { RoundResult } from '../../engine/round.js';
 import type { GameState } from '../../engine/state.js';
 import { playInteractiveGame } from '../play/session.js';
 import { createTraceMeta, TraceWriter } from '../../trace/trace.js';
+import type { RendererVerbosity } from '../../adapters/interactiveRenderer.js';
 
 type PlayOptions = {
   seed: string;
@@ -12,6 +13,7 @@ type PlayOptions = {
   trace?: string;
   traceSnapshots?: boolean;
   traceTopCards?: boolean;
+  verbosity?: RendererVerbosity | string;
 };
 
 export const createPlayCommand = (): Command => {
@@ -23,6 +25,7 @@ export const createPlayCommand = (): Command => {
     .option('--trace <file>', 'Write a JSONL trace for the game.')
     .option('--trace-snapshots', 'Include per-round snapshots in trace output.')
     .option('--trace-top-cards', 'Include top-card details when snapshots are enabled.')
+    .option('--verbosity <level>', 'Output verbosity (low|normal|high).', 'normal')
     .action(async (options: PlayOptions) => {
       const ui = (options.ui ?? 'ink').toLowerCase();
       if (ui !== 'prompt' && ui !== 'ink') {
@@ -33,6 +36,11 @@ export const createPlayCommand = (): Command => {
         command.error('--trace-top-cards requires --trace-snapshots.');
       }
 
+      const verbosity = (options.verbosity ?? 'normal').toLowerCase();
+      if (verbosity !== 'low' && verbosity !== 'normal' && verbosity !== 'high') {
+        command.error('--verbosity must be one of: low, normal, high.');
+      }
+
       const traceCliArgs = {
         command: 'play',
         seed: options.seed,
@@ -40,6 +48,7 @@ export const createPlayCommand = (): Command => {
         autoplay: Boolean(options.autoplay),
         traceSnapshots: options.traceSnapshots,
         traceTopCards: options.traceTopCards,
+        verbosity,
       };
 
       let traceWriter: TraceWriter | undefined;
@@ -73,6 +82,7 @@ export const createPlayCommand = (): Command => {
           startAutoplay: Boolean(options.autoplay),
           onGameStart,
           onRoundComplete,
+          verbosity: verbosity as RendererVerbosity,
         });
         return;
       }
@@ -82,6 +92,7 @@ export const createPlayCommand = (): Command => {
         startAutoplay: Boolean(options.autoplay),
         onGameStart,
         onRoundComplete,
+        verbosity: verbosity as RendererVerbosity,
       });
     });
 
