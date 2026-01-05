@@ -169,6 +169,10 @@ export const renderRoundEvents = (
     RoundEvent,
     { type: 'PileRecycled' }
   >[];
+  const stateHashEvents = events.filter((event) => event.type === 'StateHashed') as Extract<
+    RoundEvent,
+    { type: 'StateHashed' }
+  >[];
   const gameEnded = events.find((event) => event.type === 'GameEnded') as Extract<
     RoundEvent,
     { type: 'GameEnded' }
@@ -194,6 +198,10 @@ export const renderRoundEvents = (
       lines.push(`${winner} wins the trick and collects ${trick.collected.length} card(s).`);
     }
   }
+
+  stateHashEvents.forEach((event) => {
+    lines.push(chalk.gray(`State hash (${event.mode}): ${event.hash}`));
+  });
 
   lines.push(pileSummary(state));
 

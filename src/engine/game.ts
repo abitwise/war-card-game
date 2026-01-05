@@ -1,4 +1,5 @@
 import { createDeck, shuffleDeck } from './deck.js';
+import type { StateHashMode } from './hash.js';
 import type { RNG } from './rng.js';
 import { createSeededRng } from './rng.js';
 import type { RoundEvent, RoundResult } from './round.js';
@@ -15,6 +16,7 @@ export type RunGameOptions = {
   onGameStart?: (state: GameState) => void;
   onRound?: (result: RoundResult) => void;
   collectEvents?: boolean;
+  stateHashMode?: StateHashMode;
 };
 
 export type GameRunResult = {
@@ -42,12 +44,13 @@ export const runGame = (options: RunGameOptions): GameRunResult => {
   const { rng, state: initialState } = createGame(options);
   const captureEvents = options.collectEvents ?? true;
   const events: RoundEvent[] = [];
+  const stateHashMode = options.stateHashMode ?? 'off';
 
   options.onGameStart?.(initialState);
 
   let state = initialState;
   while (state.active) {
-    const result = playRound(state, rng);
+    const result = playRound(state, rng, stateHashMode);
     options.onRound?.(result);
     if (captureEvents) {
       events.push(...result.events);

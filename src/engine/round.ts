@@ -1,4 +1,6 @@
 import { shuffleDeck } from './deck.js';
+import type { StateHashMode } from './hash.js';
+import { hashState } from './hash.js';
 import type { RNG } from './rng.js';
 import type { GameState, TableCard } from './state.js';
 
@@ -8,6 +10,7 @@ export type RoundEvent =
   | { type: 'WarStarted'; warLevel: number }
   | { type: 'PileRecycled'; playerId: number; cards: number; shuffled: boolean }
   | { type: 'TrickWon'; winner: number; collected: TableCard[] }
+  | { type: 'StateHashed'; round: number; mode: Exclude<StateHashMode, 'off'>; hash: string }
   | { type: 'GameEnded'; reason: 'win' | 'timeout' | 'stalemate'; winner?: number };
 
 export type RoundResult = {
@@ -83,7 +86,7 @@ const determineRoundWinner = (faceUpA: TableCard, faceUpB: TableCard): number | 
   return faceUpA.card.rank > faceUpB.card.rank ? faceUpA.playerId : faceUpB.playerId;
 };
 
-export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
+export const playRound = (inputState: GameState, rng: RNG, stateHashMode: StateHashMode = 'off'): RoundResult => {
   if (!inputState.active) {
     return { state: inputState, events: [] };
   }
@@ -96,9 +99,19 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
     };
   }
 
+  const currentRound = inputState.round;
   const state = cloneState(inputState);
-  const events: RoundEvent[] = [{ type: 'RoundStarted', round: state.round }];
+  const events: RoundEvent[] = [{ type: 'RoundStarted', round: currentRound }];
   let warLevel = 0;
+
+  const pushHashEvent = () => {
+    if (stateHashMode === 'off') {
+      return;
+    }
+    const mode: Exclude<StateHashMode, 'off'> = stateHashMode === 'full' ? 'full' : 'counts';
+    const hash = hashState({ ...state, round: currentRound }, mode);
+    events.push({ type: 'StateHashed', round: currentRound, mode, hash });
+  };
 
   const drawFaceUp = (playerId: number): TableCard | undefined =>
     drawCardToTable(state, playerId, false, rng, events);
@@ -116,6 +129,7 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
     state.round += 1;
     state.active = false;
     events.push({ type: 'GameEnded', reason: 'stalemate' });
+    pushHashEvent();
     return { state, events };
   }
   if (!initialA || !initialB) {
@@ -126,6 +140,7 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
     state.active = false;
     events.push({ type: 'TrickWon', winner, collected: [...state.table.battleCards] });
     events.push({ type: 'GameEnded', reason: 'win', winner });
+    pushHashEvent();
     return { state, events };
   }
 
@@ -161,6 +176,7 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
     state.round += 1;
     state.active = false;
     events.push({ type: 'GameEnded', reason: 'stalemate' });
+    pushHashEvent();
     return { state, events };
   }
 
@@ -187,5 +203,6 @@ export const playRound = (inputState: GameState, rng: RNG): RoundResult => {
     }
   }
 
+  pushHashEvent();
   return { state, events };
 };
