@@ -214,7 +214,7 @@
   - [x] Add coverage for pause-on-war behavior (unit test with simulated events).
 
 ### [P2-6] Deterministic State Hashing (Correctness + Regression)
-- Status: Backlog
+- Status: Done
 - Summary: Add canonical hashing of game state per round to validate determinism and replay correctness.
 - Context: Great for regression tests and ensuring traces remain trustworthy.
 - Functional behavior (GIVEN/WHEN/THEN):

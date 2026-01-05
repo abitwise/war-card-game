@@ -6,6 +6,7 @@ import {
   renderStats,
   type RendererVerbosity,
 } from '../../adapters/interactiveRenderer.js';
+import type { StateHashMode } from '../../engine/hash.js';
 import { createGame } from '../../engine/game.js';
 import type { RoundEvent } from '../../engine/round.js';
 import { playRound } from '../../engine/round.js';
@@ -38,6 +39,7 @@ export type PlayOptions = {
   delayMs?: number;
   speed?: number;
   pauseOnWar?: boolean;
+  stateHashMode?: StateHashMode;
 };
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -65,8 +67,9 @@ const playRoundAndRender = (
   output: (line: string) => void,
   onRoundComplete?: RoundCompleteHandler,
   verbosity: RendererVerbosity = 'normal',
+  stateHashMode: StateHashMode = 'off',
 ): { state: GameState; events: RoundEvent[] } => {
-  const result = playRound(state, rng);
+  const result = playRound(state, rng, stateHashMode);
   renderRoundEvents(result.events, result.state, output, verbosity);
   onRoundComplete?.(result);
   return result;
@@ -79,6 +82,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
   const autoplayBurst = options.autoplayBurst ?? 5;
   const playbackDelayMs = computePlaybackDelayMs(options.speed, options.delayMs);
   const pauseOnWar = options.pauseOnWar ?? false;
+  const stateHashMode = options.stateHashMode ?? 'off';
 
   const { state: initialState, rng } = createGame({
     seed,
@@ -102,7 +106,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
       let roundsPlayed = 0;
       let warDetected = false;
       while (state.active && roundsPlayed < autoplayBurst) {
-        const result = playRoundAndRender(state, rng, output, options.onRoundComplete, verbosity);
+        const result = playRoundAndRender(state, rng, output, options.onRoundComplete, verbosity, stateHashMode);
         state = result.state;
         warDetected ||= pauseOnWar && hasWarEvent(result.events);
         roundsPlayed += 1;
@@ -142,7 +146,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
       continue;
     }
 
-    const result = playRoundAndRender(state, rng, output, options.onRoundComplete, verbosity);
+    const result = playRoundAndRender(state, rng, output, options.onRoundComplete, verbosity, stateHashMode);
     state = result.state;
   }
 

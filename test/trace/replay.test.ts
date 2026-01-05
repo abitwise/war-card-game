@@ -3,10 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { runGame } from '../../src/engine/game.js';
+import type { StateHashMode } from '../../src/engine/hash.js';
 import { replayTrace } from '../../src/trace/replay.js';
 import { createTraceMeta, TraceWriter } from '../../src/trace/trace.js';
 
-const createTraceWithWar = () => {
+const createTraceWithWar = (stateHashMode: StateHashMode = 'off') => {
   const dir = mkdtempSync(join(tmpdir(), 'war-replay-'));
   const tracePath = join(dir, 'game.jsonl');
 
@@ -17,9 +18,13 @@ const createTraceWithWar = () => {
     collectEvents: false,
     rules: { maxRounds: 10 },
     onGameStart: (state) => {
-      writer = new TraceWriter({ filePath: tracePath }, createTraceMeta({ seed: 'war-3', state, cliArgs: { command: 'test' } }));
+      writer = new TraceWriter(
+        { filePath: tracePath },
+        createTraceMeta({ seed: 'war-3', state, cliArgs: { command: 'test' }, stateHashMode }),
+      );
     },
     onRound: (round) => writer?.recordRound(round),
+    stateHashMode,
   });
 
   return tracePath;
@@ -34,6 +39,15 @@ describe('replayTrace', () => {
     await replayTrace(tracePath, { pauseOnWar: true, waitForContinue: pauseSpy, verbosity: 'low', delayMs: 0 });
 
     expect(pauseSpy).toHaveBeenCalled();
+    logSpy.mockRestore();
+  });
+
+  it('verifies traces that include state hashes', async () => {
+    const tracePath = createTraceWithWar('counts');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(replayTrace(tracePath, { verify: true, verbosity: 'low', delayMs: 0 })).resolves.toBeUndefined();
+
     logSpy.mockRestore();
   });
 });

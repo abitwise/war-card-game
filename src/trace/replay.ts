@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { createInterface } from 'node:readline';
 import { formatTableCard, renderRoundEvents, type RendererVerbosity } from '../adapters/interactiveRenderer.js';
 import { createGame } from '../engine/game.js';
+import type { StateHashMode } from '../engine/hash.js';
 import { playRound, type RoundEvent, type RoundResult } from '../engine/round.js';
 import type { TraceEventRecord, TraceMetaRecord } from './trace.js';
 import { readTraceFile, type LoadedTrace } from './reader.js';
@@ -85,6 +86,8 @@ const renderEvent = (event: RoundEvent, players: string[]): string[] => {
       return formatCardsPlaced(players, event);
     case 'TrickWon':
       return [`${playerName(players, event.winner)} wins the trick and collects ${event.collected.length} card(s).`];
+    case 'StateHashed':
+      return [`State hash (${event.mode}) [round ${event.round}]: ${event.hash}`];
     case 'GameEnded': {
       const winner = event.winner !== undefined ? playerName(players, event.winner) : undefined;
       if (event.reason === 'win' && winner) {
@@ -128,7 +131,7 @@ const resolveRoundNumber = (result: RoundResult): number => {
   return result.state.round;
 };
 
-const generateRoundResults = (meta: TraceMetaRecord): RoundResult[] => {
+const generateRoundResults = (meta: TraceMetaRecord, stateHashMode: StateHashMode = 'off'): RoundResult[] => {
   const { state: initialState, rng } = createGame({
     seed: meta.seed,
     rules: meta.rules,
@@ -138,7 +141,7 @@ const generateRoundResults = (meta: TraceMetaRecord): RoundResult[] => {
   const results: RoundResult[] = [];
   let state = initialState;
   while (state.active) {
-    const result = playRound(state, rng);
+    const result = playRound(state, rng, stateHashMode);
     results.push(result);
     state = result.state;
   }
@@ -157,8 +160,12 @@ const flattenRoundResults = (rounds: RoundResult[]): TraceEventRecord[] => {
   return records;
 };
 
-const verifyTraceEvents = (trace: LoadedTrace, generatedRounds?: RoundResult[]) => {
-  const generated = flattenRoundResults(generatedRounds ?? generateRoundResults(trace.meta));
+const verifyTraceEvents = (
+  trace: LoadedTrace,
+  generatedRounds?: RoundResult[],
+  stateHashMode: StateHashMode = 'off',
+) => {
+  const generated = flattenRoundResults(generatedRounds ?? generateRoundResults(trace.meta, stateHashMode));
   if (generated.length !== trace.events.length) {
     throw new Error(`Trace verification failed: expected ${trace.events.length} events, got ${generated.length}.`);
   }
@@ -236,9 +243,10 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
   const output = options.output ?? console.log;
   const verbosity: TraceVerbosity = options.verbosity ?? 'normal';
   const trace = await readTraceFile(filePath);
-  const roundResults = generateRoundResults(trace.meta);
+  const stateHashMode = trace.meta.stateHashMode ?? 'off';
+  const roundResults = generateRoundResults(trace.meta, stateHashMode);
   if (options.verify) {
-    verifyTraceEvents(trace, roundResults);
+    verifyTraceEvents(trace, roundResults, stateHashMode);
     output(chalk.green('Trace verification succeeded.'));
   }
 

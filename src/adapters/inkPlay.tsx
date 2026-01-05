@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RenderOptions } from 'ink';
 import { Box, Newline, Text, render, useApp, useInput } from 'ink';
 import { createGame } from '../engine/game.js';
+import type { StateHashMode } from '../engine/hash.js';
 import type { RoundEvent, RoundResult } from '../engine/round.js';
 import { playRound } from '../engine/round.js';
 import type { WarRulesInput } from '../engine/rules.js';
@@ -75,6 +76,7 @@ type InkPlayProps = {
   delayMs?: number;
   speed?: number;
   pauseOnWar?: boolean;
+  stateHashMode?: StateHashMode;
 };
 
 const InkPlayApp = ({
@@ -91,6 +93,7 @@ const InkPlayApp = ({
   delayMs,
   speed,
   pauseOnWar,
+  stateHashMode = 'off',
 }: InkPlayProps) => {
   const { exit } = useApp();
   const { state: initialState, rng } = useMemo(
@@ -156,7 +159,7 @@ const InkPlayApp = ({
       const batchedEntries: LogEntry[] = [];
       let warDetected = false;
       for (let i = 0; i < count && state.active; i += 1) {
-        const result = playRound(state, rngRef.current);
+        const result = playRound(state, rngRef.current, stateHashMode);
         state = result.state;
         onRoundComplete?.(result);
         warDetected ||= !!pauseOnWar && hasWarEvent(result.events);
@@ -296,6 +299,7 @@ export type InkPlayOptions = {
   delayMs?: number;
   speed?: number;
   pauseOnWar?: boolean;
+  stateHashMode?: StateHashMode;
 };
 
 export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameState> => {
@@ -308,7 +312,7 @@ export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameStat
     options.onGameStart?.(initialState);
     let state = initialState;
     while (state.active) {
-      const result = playRound(state, rng);
+      const result = playRound(state, rng, options.stateHashMode ?? 'off');
       options.onRoundComplete?.(result);
       state = result.state;
     }
@@ -335,6 +339,7 @@ export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameStat
       delayMs={options.delayMs}
       speed={options.speed}
       pauseOnWar={options.pauseOnWar}
+      stateHashMode={options.stateHashMode}
     />,
     options.renderOptions,
   );

@@ -52,4 +52,46 @@ describe('TraceWriter', () => {
     expect(snapshotRecords.length).toBeGreaterThan(0);
     expect(snapshotRecords[0].pileCounts.length).toBeGreaterThan(0);
   });
+
+  it('records the configured state hash mode in trace metadata', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'war-trace-hash-'));
+    const tracePath = join(dir, 'game.jsonl');
+
+    let writer: TraceWriter | undefined;
+
+    runGame({
+      seed: 'trace-hash-seed',
+      collectEvents: false,
+      stateHashMode: 'full',
+      onGameStart: (state) => {
+        writer = new TraceWriter(
+          { filePath: tracePath },
+          createTraceMeta({
+            seed: 'trace-hash-seed',
+            state,
+            cliArgs: { command: 'simulate', seedBase: 'trace' },
+            stateHashMode: 'full',
+          }),
+        );
+      },
+      onRound: (round) => {
+        writer?.recordRound(round);
+      },
+      rules: { maxRounds: 3 },
+    });
+
+    const lines = readFileSync(tracePath, 'utf8')
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0);
+
+    const meta = JSON.parse(lines[0]);
+    expect(meta.stateHashMode).toBe('full');
+
+    const hashEvents = lines
+      .slice(1)
+      .map((line) => JSON.parse(line))
+      .filter((record) => record.type === 'event' && record.event.type === 'StateHashed');
+    expect(hashEvents.length).toBeGreaterThan(0);
+  });
 });

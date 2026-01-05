@@ -1,9 +1,10 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Card } from '../engine/cards.js';
+import type { StateHashMode } from '../engine/hash.js';
 import type { RoundEvent, RoundResult } from '../engine/round.js';
 import type { GameState } from '../engine/state.js';
-import packageJson from '../../package.json' assert { type: 'json' };
+import packageJson from '../../package.json' with { type: 'json' };
 
 export const TRACE_VERSION = '1.0';
 export const ENGINE_VERSION = packageJson.version;
@@ -18,6 +19,7 @@ export type TraceMetaRecord = {
   cliArgs: Record<string, unknown>;
   players: string[];
   maxRounds?: number;
+  stateHashMode?: StateHashMode;
 };
 
 export type TraceEventRecord = {
@@ -58,6 +60,7 @@ export const createTraceMeta = (params: {
   state: GameState;
   cliArgs: Record<string, unknown>;
   timestamp?: string;
+  stateHashMode?: StateHashMode;
 }): TraceMetaRecord => ({
   type: 'meta',
   version: TRACE_VERSION,
@@ -68,6 +71,7 @@ export const createTraceMeta = (params: {
   cliArgs: params.cliArgs,
   players: params.state.players.map((player) => player.name),
   maxRounds: params.state.config.maxRounds,
+  stateHashMode: params.stateHashMode,
 });
 
 const toLine = (record: TraceRecord): string => `${JSON.stringify(record)}\n`;

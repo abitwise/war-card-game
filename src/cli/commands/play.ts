@@ -1,5 +1,6 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { runInkPlay } from '../../adapters/inkPlay.js';
+import type { StateHashMode } from '../../engine/hash.js';
 import type { RoundResult } from '../../engine/round.js';
 import type { GameState } from '../../engine/state.js';
 import { playInteractiveGame } from '../play/session.js';
@@ -18,6 +19,7 @@ type PlayOptions = {
   speed?: number;
   delayMs?: number;
   pauseOnWar?: boolean;
+  stateHash?: string;
 };
 
 export const createPlayCommand = (): Command => {
@@ -30,6 +32,7 @@ export const createPlayCommand = (): Command => {
     .option('--trace-snapshots', 'Include per-round snapshots in trace output.')
     .option('--trace-top-cards', 'Include top-card details when snapshots are enabled.')
     .option('--verbosity <level>', 'Output verbosity (low|normal|high).', 'normal')
+    .option('--state-hash <mode>', 'State hash mode: off|counts|full.', 'off')
     .option(
       '--speed <multiplier>',
       'Autoplay speed multiplier (higher is faster).',
@@ -73,6 +76,11 @@ export const createPlayCommand = (): Command => {
       const speed = options.speed ?? 1;
       const delayMs = options.delayMs ?? DEFAULT_PLAYBACK_DELAY_MS;
       const pauseOnWar = Boolean(options.pauseOnWar);
+      const stateHashInput = (options.stateHash ?? 'off').toLowerCase();
+      if (stateHashInput !== 'off' && stateHashInput !== 'counts' && stateHashInput !== 'full') {
+        command.error('--state-hash must be one of: off, counts, full.');
+      }
+      const stateHashMode = stateHashInput as StateHashMode;
 
       const traceCliArgs = {
         command: 'play',
@@ -85,6 +93,7 @@ export const createPlayCommand = (): Command => {
         speed,
         delayMs,
         pauseOnWar,
+        stateHashMode,
       };
 
       let traceWriter: TraceWriter | undefined;
@@ -101,6 +110,7 @@ export const createPlayCommand = (): Command => {
                 seed: options.seed,
                 state,
                 cliArgs: traceCliArgs,
+                stateHashMode,
               }),
             );
           }
@@ -122,6 +132,7 @@ export const createPlayCommand = (): Command => {
           speed,
           delayMs,
           pauseOnWar,
+          stateHashMode,
         });
         return;
       }
@@ -135,6 +146,7 @@ export const createPlayCommand = (): Command => {
         speed,
         delayMs,
         pauseOnWar,
+        stateHashMode,
       });
     });
 

@@ -1,5 +1,6 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { dirname, extname, basename, join } from 'node:path';
+import type { StateHashMode } from '../../engine/hash.js';
 import { runGame } from '../../engine/game.js';
 import { createSeededRng } from '../../engine/rng.js';
 import type { RoundResult } from '../../engine/round.js';
@@ -21,6 +22,7 @@ type SimulateOptions = {
   traceGameIndex?: number;
   traceSnapshots?: boolean;
   traceTopCards?: boolean;
+  stateHash?: string;
 };
 
 type SimulationTraceConfig = {
@@ -332,6 +334,7 @@ export const runSimulations = (options: {
   games: number;
   seedBase: string;
   trace?: SimulationTraceConfig;
+  stateHashMode?: StateHashMode;
 }): SimulationSummary => {
   const runs: SimulationRun[] = [];
   let totalRounds = 0;
@@ -366,6 +369,7 @@ export const runSimulations = (options: {
       traceGameIndex: traceConfig?.gameIndex,
       traceSnapshots: traceConfig?.includeSnapshots,
       traceTopCards: traceConfig?.includeTopCards,
+      stateHashMode: options.stateHashMode ?? 'off',
     };
 
     let writer: TraceWriter | undefined;
@@ -380,6 +384,7 @@ export const runSimulations = (options: {
           seed,
           state,
           cliArgs: { ...cliArgs, gameIndex: i + 1 },
+          stateHashMode: options.stateHashMode,
         });
         // In sampled mode, append game index to filename to avoid multiple meta records in one file
         let traceFilePath = config.filePath;
@@ -419,6 +424,7 @@ export const runSimulations = (options: {
         writer?.recordRound(roundResult);
       },
       collectEvents: !traceThisGame,
+      stateHashMode: options.stateHashMode,
     });
     runTracker = runTracker ?? createRunMetricsTracker(result.state);
 
@@ -680,6 +686,7 @@ export const createSimulateCommand = (): Command => {
     .option('--trace-game-index <index>', 'Game index to trace in single mode (1-based).', parseGameIndex)
     .option('--trace-snapshots', 'Include per-round snapshots in the trace.')
     .option('--trace-top-cards', 'Include top-card details when snapshots are enabled.')
+    .option('--state-hash <mode>', 'State hash mode: off|counts|full.', 'off')
     .action((options: SimulateOptions) => {
       if (options.json && options.csv) {
         command.error('Cannot use --json and --csv together.');
@@ -719,6 +726,12 @@ export const createSimulateCommand = (): Command => {
         }
       }
 
+      const stateHashInput = (options.stateHash ?? 'off').toLowerCase();
+      if (stateHashInput !== 'off' && stateHashInput !== 'counts' && stateHashInput !== 'full') {
+        command.error('--state-hash must be one of: off, counts, full.');
+      }
+      const stateHashMode = stateHashInput as StateHashMode;
+
       const traceConfig: SimulationTraceConfig | undefined = options.trace
         ? {
             filePath: options.trace,
@@ -730,7 +743,12 @@ export const createSimulateCommand = (): Command => {
           }
         : undefined;
 
-      const summary = runSimulations({ games: options.games, seedBase: options.seed, trace: traceConfig });
+      const summary = runSimulations({
+        games: options.games,
+        seedBase: options.seed,
+        trace: traceConfig,
+        stateHashMode,
+      });
 
       if (options.json) {
         console.log(JSON.stringify(summary, null, 2));
