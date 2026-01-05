@@ -25,6 +25,7 @@ describe('playInteractiveGame', () => {
       seed: 'play-test',
       prompt,
       output: recorder.output,
+      delayMs: 0,
     });
 
     expect(recorder.lines.some((line) => line.includes('Round 1'))).toBe(true);
@@ -43,9 +44,29 @@ describe('playInteractiveGame', () => {
       prompt,
       output: recorder.output,
       autoplayBurst: 3,
+      delayMs: 0,
     });
 
     expect(recorder.lines.some((line) => line.includes('Autoplay enabled'))).toBe(true);
+    expect(state.round).toBeGreaterThan(1);
+  });
+
+  it('pauses autoplay when a war is detected and pause-on-war is enabled', async () => {
+    chalk.level = 0;
+    const prompt = createPrompt(['quit']);
+    const recorder = createRecorder();
+
+    const state = await playInteractiveGame({
+      seed: 'war-3',
+      prompt,
+      output: recorder.output,
+      autoplayBurst: 3,
+      startAutoplay: true,
+      pauseOnWar: true,
+      delayMs: 0,
+    });
+
+    expect(recorder.lines.some((line) => line.includes('Autoplay paused due to war'))).toBe(true);
     expect(state.round).toBeGreaterThan(1);
   });
 });

@@ -1,10 +1,11 @@
-import { Command } from 'commander';
+import { Command, InvalidArgumentError } from 'commander';
 import { runInkPlay } from '../../adapters/inkPlay.js';
 import type { RoundResult } from '../../engine/round.js';
 import type { GameState } from '../../engine/state.js';
 import { playInteractiveGame } from '../play/session.js';
 import { createTraceMeta, TraceWriter } from '../../trace/trace.js';
 import type { RendererVerbosity } from '../../adapters/interactiveRenderer.js';
+import { DEFAULT_PLAYBACK_DELAY_MS } from '../../playback.js';
 
 type PlayOptions = {
   seed: string;
@@ -14,6 +15,9 @@ type PlayOptions = {
   traceSnapshots?: boolean;
   traceTopCards?: boolean;
   verbosity?: RendererVerbosity | string;
+  speed?: number;
+  delayMs?: number;
+  pauseOnWar?: boolean;
 };
 
 export const createPlayCommand = (): Command => {
@@ -26,6 +30,31 @@ export const createPlayCommand = (): Command => {
     .option('--trace-snapshots', 'Include per-round snapshots in trace output.')
     .option('--trace-top-cards', 'Include top-card details when snapshots are enabled.')
     .option('--verbosity <level>', 'Output verbosity (low|normal|high).', 'normal')
+    .option(
+      '--speed <multiplier>',
+      'Autoplay speed multiplier (higher is faster).',
+      (value) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          throw new InvalidArgumentError('--speed must be a positive number.');
+        }
+        return parsed;
+      },
+      1,
+    )
+    .option(
+      '--delay-ms <ms>',
+      'Delay between autoplay bursts in milliseconds (before applying speed).',
+      (value) => {
+        const parsed = Number.parseInt(value, 10);
+        if (!Number.isInteger(parsed) || parsed < 0) {
+          throw new InvalidArgumentError('--delay-ms must be a non-negative integer.');
+        }
+        return parsed;
+      },
+      DEFAULT_PLAYBACK_DELAY_MS,
+    )
+    .option('--pause-on-war', 'Pause autoplay when a war starts.')
     .action(async (options: PlayOptions) => {
       const ui = (options.ui ?? 'ink').toLowerCase();
       if (ui !== 'prompt' && ui !== 'ink') {
@@ -41,6 +70,10 @@ export const createPlayCommand = (): Command => {
         command.error('--verbosity must be one of: low, normal, high.');
       }
 
+      const speed = options.speed ?? 1;
+      const delayMs = options.delayMs ?? DEFAULT_PLAYBACK_DELAY_MS;
+      const pauseOnWar = Boolean(options.pauseOnWar);
+
       const traceCliArgs = {
         command: 'play',
         seed: options.seed,
@@ -49,6 +82,9 @@ export const createPlayCommand = (): Command => {
         traceSnapshots: options.traceSnapshots,
         traceTopCards: options.traceTopCards,
         verbosity,
+        speed,
+        delayMs,
+        pauseOnWar,
       };
 
       let traceWriter: TraceWriter | undefined;
@@ -83,6 +119,9 @@ export const createPlayCommand = (): Command => {
           onGameStart,
           onRoundComplete,
           verbosity: verbosity as RendererVerbosity,
+          speed,
+          delayMs,
+          pauseOnWar,
         });
         return;
       }
@@ -93,6 +132,9 @@ export const createPlayCommand = (): Command => {
         onGameStart,
         onRoundComplete,
         verbosity: verbosity as RendererVerbosity,
+        speed,
+        delayMs,
+        pauseOnWar,
       });
     });
 

@@ -7,6 +7,7 @@ import { playRound } from '../engine/round.js';
 import type { WarRulesInput } from '../engine/rules.js';
 import type { GameState } from '../engine/state.js';
 import { renderRoundEvents, type RendererVerbosity } from './interactiveRenderer.js';
+import { computePlaybackDelayMs, hasWarEvent } from '../playback.js';
 
 type LogEntry = { key: string; content: React.ReactNode };
 
@@ -71,6 +72,9 @@ type InkPlayProps = {
   onComplete?: (state: GameState) => void;
   onGameStart?: (state: GameState) => void;
   onRoundComplete?: (result: RoundResult) => void;
+  delayMs?: number;
+  speed?: number;
+  pauseOnWar?: boolean;
 };
 
 const InkPlayApp = ({
@@ -84,6 +88,9 @@ const InkPlayApp = ({
   onComplete,
   onGameStart,
   onRoundComplete,
+  delayMs,
+  speed,
+  pauseOnWar,
 }: InkPlayProps) => {
   const { exit } = useApp();
   const { state: initialState, rng } = useMemo(
@@ -140,17 +147,19 @@ const InkPlayApp = ({
 
   const steppingRef = useRef(false);
   const playRounds = useCallback(
-    (count: number) => {
+    (count: number): boolean => {
       if (steppingRef.current || completedRef.current) {
-        return;
+        return false;
       }
       steppingRef.current = true;
       let state = stateRef.current;
       const batchedEntries: LogEntry[] = [];
+      let warDetected = false;
       for (let i = 0; i < count && state.active; i += 1) {
         const result = playRound(state, rngRef.current);
         state = result.state;
         onRoundComplete?.(result);
+        warDetected ||= !!pauseOnWar && hasWarEvent(result.events);
         batchedEntries.push(...formatRoundEvents(result.events, result.state, nextKey, verbosity));
       }
       appendLog(batchedEntries);
@@ -160,8 +169,9 @@ const InkPlayApp = ({
       if (!state.active) {
         completeGame(state);
       }
+      return warDetected;
     },
-    [appendLog, completeGame, nextKey, onRoundComplete, verbosity],
+    [appendLog, completeGame, nextKey, onRoundComplete, pauseOnWar, verbosity],
   );
 
   const toggleAutoplay = useCallback(() => {
@@ -184,24 +194,30 @@ const InkPlayApp = ({
     }
 
     let cancelled = false;
+    const delay = computePlaybackDelayMs(speed, delayMs);
 
     const runBurst = () => {
       if (cancelled || completedRef.current || !stateRef.current.active) {
         return;
       }
-      playRounds(autoplayBurst);
+      const warTriggered = playRounds(autoplayBurst);
+      if (warTriggered && pauseOnWar) {
+        setAutoplay(false);
+        appendLog([{ key: nextKey(), content: <Text>Autoplay paused due to war.</Text> }]);
+        return;
+      }
       if (!cancelled && !completedRef.current && stateRef.current.active && autoplay) {
-        setTimeout(runBurst, 0);
+        setTimeout(runBurst, delay);
       }
     };
 
-    const timerId = setTimeout(runBurst, 0);
+    const timerId = setTimeout(runBurst, delay);
 
     return () => {
       cancelled = true;
       clearTimeout(timerId);
     };
-  }, [autoplay, autoplayBurst, playRounds]);
+  }, [appendLog, autoplay, autoplayBurst, delayMs, nextKey, pauseOnWar, playRounds, speed]);
 
   useInput((input, key) => {
     if (key.return) {
@@ -277,6 +293,9 @@ export type InkPlayOptions = {
   verbosity?: RendererVerbosity;
   onGameStart?: (state: GameState) => void;
   onRoundComplete?: (result: RoundResult) => void;
+  delayMs?: number;
+  speed?: number;
+  pauseOnWar?: boolean;
 };
 
 export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameState> => {
@@ -313,6 +332,9 @@ export const runInkPlay = async (options: InkPlayOptions = {}): Promise<GameStat
       onGameStart={options.onGameStart}
       onRoundComplete={options.onRoundComplete}
       onComplete={resolveState}
+      delayMs={options.delayMs}
+      speed={options.speed}
+      pauseOnWar={options.pauseOnWar}
     />,
     options.renderOptions,
   );

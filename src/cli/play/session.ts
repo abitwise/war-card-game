@@ -11,6 +11,7 @@ import type { RoundEvent } from '../../engine/round.js';
 import { playRound } from '../../engine/round.js';
 import type { WarRulesInput } from '../../engine/rules.js';
 import type { GameState } from '../../engine/state.js';
+import { computePlaybackDelayMs, hasWarEvent } from '../../playback.js';
 
 export type PromptAction = 'next' | 'autoplay' | 'stats' | 'quit' | 'help';
 
@@ -34,7 +35,12 @@ export type PlayOptions = {
   onGameStart?: (state: GameState) => void;
   onRoundComplete?: RoundCompleteHandler;
   verbosity?: RendererVerbosity;
+  delayMs?: number;
+  speed?: number;
+  pauseOnWar?: boolean;
 };
+
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 const parseAction = (value: string): PromptAction => {
   const trimmed = value.trim().toLowerCase();
@@ -71,6 +77,8 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
   const output = options.output ?? console.log;
   const prompt = options.prompt ?? defaultPrompt;
   const autoplayBurst = options.autoplayBurst ?? 5;
+  const playbackDelayMs = computePlaybackDelayMs(options.speed, options.delayMs);
+  const pauseOnWar = options.pauseOnWar ?? false;
 
   const { state: initialState, rng } = createGame({
     seed,
@@ -92,15 +100,28 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
   while (state.active) {
     if (autoplay && state.active) {
       let roundsPlayed = 0;
+      let warDetected = false;
       while (state.active && roundsPlayed < autoplayBurst) {
         const result = playRoundAndRender(state, rng, output, options.onRoundComplete, verbosity);
         state = result.state;
+        warDetected ||= pauseOnWar && hasWarEvent(result.events);
         roundsPlayed += 1;
+        if (warDetected) {
+          break;
+        }
       }
       if (!state.active) {
         break;
       }
+      if (warDetected && pauseOnWar) {
+        autoplay = false;
+        output('Autoplay paused due to war. Press Enter to continue.');
+      } else if (playbackDelayMs > 0) {
+        await wait(playbackDelayMs);
+      }
     }
+
+    if (!state.active) break;
 
     const action = await prompt({ autoplay, state });
     if (action === 'quit') {

@@ -49,7 +49,7 @@ describe('trace command group', () => {
     const command = createTraceCommand().exitOverride();
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await command.parseAsync(['replay', tracePath, '--verify', '--verbosity', 'low', '--speed', '0'], {
+    await command.parseAsync(['replay', tracePath, '--verify', '--verbosity', 'low', '--delay-ms', '0', '--speed', '2'], {
       from: 'user',
     });
 

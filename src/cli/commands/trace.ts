@@ -1,19 +1,12 @@
 import { Command, InvalidArgumentError } from 'commander';
 import type { TraceVerbosity, TraceViewFilter } from '../../trace/replay.js';
 import { replayTrace, viewTrace } from '../../trace/replay.js';
+import { DEFAULT_PLAYBACK_DELAY_MS } from '../../playback.js';
 
 const parseRoundNumber = (label: string) => (value: string): number => {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new InvalidArgumentError(`${label} must be a positive integer.`);
-  }
-  return parsed;
-};
-
-const parseDelay = (value: string): number => {
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed) || parsed < 0) {
-    throw new InvalidArgumentError('--speed must be a non-negative integer (milliseconds).');
   }
   return parsed;
 };
@@ -30,6 +23,22 @@ const normalizeVerbosity = (value: string | undefined): TraceVerbosity => {
     throw new InvalidArgumentError('--verbosity must be one of: low, normal, high.');
   }
   return level;
+};
+
+const parseDelay = (value: string): number => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new InvalidArgumentError('--delay-ms must be a non-negative integer.');
+  }
+  return parsed;
+};
+
+const parseSpeed = (value: string): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new InvalidArgumentError('--speed must be a positive number.');
+  }
+  return parsed;
 };
 
 const normalizeFilter = (value: string | undefined): TraceViewFilter => {
@@ -63,7 +72,13 @@ export const createTraceCommand = (): Command => {
     .option('--from <round>', 'First round to display (inclusive).', parseRoundNumber('--from'))
     .option('--to <round>', 'Last round to display (inclusive).', parseRoundNumber('--to'))
     .option('--verbosity <level>', 'Output verbosity (low|normal|high).', 'normal')
-    .option('--speed <ms>', 'Delay in milliseconds between rounds.', parseDelay, 0)
+    .option('--speed <multiplier>', 'Speed multiplier for playback (higher is faster).', parseSpeed, 1)
+    .option(
+      '--delay-ms <ms>',
+      'Delay in milliseconds between rounds before applying speed.',
+      parseDelay,
+      DEFAULT_PLAYBACK_DELAY_MS,
+    )
     .option('--pause-on-war', 'Pause playback when a war starts until Enter is pressed.')
     .option('--verify', 'Re-run the engine using the trace metadata and verify event parity.')
     .action(
@@ -74,6 +89,7 @@ export const createTraceCommand = (): Command => {
           to?: number;
           verbosity?: string;
           speed?: number;
+          delayMs?: number;
           pauseOnWar?: boolean;
           verify?: boolean;
         },
@@ -84,7 +100,8 @@ export const createTraceCommand = (): Command => {
           from: options.from,
           to: options.to,
           verbosity,
-          speedMs: options.speed,
+          speed: options.speed,
+          delayMs: options.delayMs,
           pauseOnWar: Boolean(options.pauseOnWar),
           verify: Boolean(options.verify),
         });
