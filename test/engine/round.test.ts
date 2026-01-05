@@ -90,4 +90,36 @@ describe('playRound - wars and edge cases', () => {
     expect(next.active).toBe(false);
     expect(events.some((e) => e.type === 'GameEnded' && e.reason === 'timeout')).toBe(true);
   });
+
+  it('runs wars among only tied-highest players in multi-player games', () => {
+    const state = createGameState({ playerNames: ['A', 'B', 'C'] });
+    state.players[0].drawPile = [card(7, '♠'), card(4, '♠'), card(14, '♣')];
+    state.players[1].drawPile = [card(7, '♥'), card(3, '♥'), card(13, '♦')];
+    state.players[2].drawPile = [card(4, '♦'), card(9, '♦'), card(5, '♠')];
+
+    const { state: next, events } = playRound(state, createSeededRng('multi-war'));
+    const warEvent = events.find((event) => event.type === 'WarStarted') as
+      | Extract<ReturnType<typeof playRound>['events'][number], { type: 'WarStarted' }>
+      | undefined;
+
+    expect(warEvent?.participants).toEqual([0, 1]);
+    expect(next.stats.wars).toBe(1);
+    expect(next.players[0].wonPile.length).toBe(7);
+    expect(next.players[1].drawPile.length + next.players[1].wonPile.length).toBe(0);
+    expect(next.players[2].drawPile.length + next.players[2].wonPile.length).toBe(2);
+  });
+
+  it('eliminates players with no cards at round start and declares the remaining winner', () => {
+    const state = createGameState({ playerNames: ['Solo', 'Out', 'Gone'] });
+    state.players[0].drawPile = [card(10, '♠')];
+    state.players[1].drawPile = [];
+    state.players[2].drawPile = [];
+
+    const { state: next, events } = playRound(state, createSeededRng('solo-win'));
+    const ending = events.find((event) => event.type === 'GameEnded');
+
+    expect(ending && ending.type === 'GameEnded' ? ending.winner : undefined).toBe(0);
+    expect(next.active).toBe(false);
+    expect(next.winner).toBe(0);
+  });
 });

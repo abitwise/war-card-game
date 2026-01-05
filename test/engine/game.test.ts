@@ -18,4 +18,15 @@ describe('runGame', () => {
     expect(result.state.active).toBe(false);
     expect(endings.some((event) => event.reason === 'timeout')).toBe(true);
   });
+
+  it('remains deterministic with four players', () => {
+    const first = runGame({ seed: 'four-player-determinism', playerNames: ['P1', 'P2', 'P3', 'P4'] });
+    const second = runGame({ seed: 'four-player-determinism', playerNames: ['P1', 'P2', 'P3', 'P4'] });
+
+    expect(second.state.winner).toBe(first.state.winner);
+    expect(second.state.round).toBe(first.state.round);
+    expect(second.state.players.map((player) => player.drawPile.length + player.wonPile.length)).toEqual(
+      first.state.players.map((player) => player.drawPile.length + player.wonPile.length),
+    );
+  });
 });

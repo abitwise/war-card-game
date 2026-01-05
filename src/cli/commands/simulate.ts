@@ -12,6 +12,7 @@ type TraceMode = 'single' | 'sampled';
 type SimulateOptions = {
   games: number;
   seed: string;
+  players?: number;
   json?: boolean;
   csv?: boolean;
   hist?: boolean;
@@ -135,19 +136,33 @@ const parseGameIndex = (value: string): number => {
   return parsed;
 };
 
-const totalCardsForPlayer = (player: PlayerState): number => player.drawPile.length + player.wonPile.length;
-
-const cardDifferential = (state: GameState): number => {
-  const playerACards = totalCardsForPlayer(state.players[0]);
-  const playerBCards = totalCardsForPlayer(state.players[1]);
-  return playerACards - playerBCards;
+const parsePlayerCount = (value: string): number => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 2 || parsed > 4) {
+    throw new InvalidArgumentError('--players must be an integer between 2 and 4.');
+  }
+  return parsed;
 };
 
-const determineLeaderFromDiff = (diff: number): number | undefined => {
-  if (diff === 0) {
-    return undefined;
-  }
-  return diff > 0 ? 0 : 1;
+const totalCardsForPlayer = (player: PlayerState): number => player.drawPile.length + player.wonPile.length;
+
+const totalsForPlayers = (state: GameState): number[] => state.players.map((player) => totalCardsForPlayer(player));
+
+const leaderFromTotals = (totals: number[]): number | undefined => {
+  if (totals.length === 0) return undefined;
+  const max = Math.max(...totals);
+  const leaders = totals
+    .map((value, index) => ({ value, index }))
+    .filter((entry) => entry.value === max)
+    .map((entry) => entry.index);
+  return leaders.length === 1 ? leaders[0] : undefined;
+};
+
+const spreadFromTotals = (totals: number[]): number => {
+  if (totals.length === 0) return 0;
+  const max = Math.max(...totals);
+  const min = Math.min(...totals);
+  return max - min;
 };
 
 const resolveRoundNumber = (result: RoundResult): number => {
@@ -165,12 +180,12 @@ type RunMetricsTracker = {
   biggestSwing: number;
   biggestSwingRound?: number;
   warDepthCounts: Record<number, number>;
-  lastDiff: number;
+  lastSpread: number;
   lastLeader?: number;
 };
 
 const createRunMetricsTracker = (initialState: GameState): RunMetricsTracker => {
-  const diff = cardDifferential(initialState);
+  const totals = totalsForPlayers(initialState);
   return {
     maxWarDepth: 0,
     recycles: 0,
@@ -178,8 +193,8 @@ const createRunMetricsTracker = (initialState: GameState): RunMetricsTracker => 
     biggestSwing: 0,
     biggestSwingRound: undefined,
     warDepthCounts: {},
-    lastDiff: diff,
-    lastLeader: determineLeaderFromDiff(diff),
+    lastSpread: spreadFromTotals(totals),
+    lastLeader: leaderFromTotals(totals),
   };
 };
 
@@ -198,14 +213,15 @@ const updateRunMetrics = (tracker: RunMetricsTracker, result: RoundResult) => {
     }
   });
 
-  const diff = cardDifferential(result.state);
-  const swing = Math.abs(diff - tracker.lastDiff);
+  const totals = totalsForPlayers(result.state);
+  const spread = spreadFromTotals(totals);
+  const swing = Math.abs(spread - tracker.lastSpread);
   if (swing > tracker.biggestSwing) {
     tracker.biggestSwing = swing;
     tracker.biggestSwingRound = round;
   }
 
-  const leader = determineLeaderFromDiff(diff);
+  const leader = leaderFromTotals(totals);
   if (leader !== undefined && tracker.lastLeader !== undefined && leader !== tracker.lastLeader) {
     tracker.leadChanges += 1;
   }
@@ -213,7 +229,7 @@ const updateRunMetrics = (tracker: RunMetricsTracker, result: RoundResult) => {
     tracker.lastLeader = leader;
   }
 
-  tracker.lastDiff = diff;
+  tracker.lastSpread = spread;
 
   return { round, roundMaxWarDepth };
 };
@@ -335,7 +351,13 @@ export const runSimulations = (options: {
   seedBase: string;
   trace?: SimulationTraceConfig;
   stateHashMode?: StateHashMode;
+  playerCount?: number;
 }): SimulationSummary => {
+  const playerCount = options.playerCount ?? 2;
+  if (!Number.isInteger(playerCount) || playerCount < 2 || playerCount > 4) {
+    throw new Error('Simulations support between 2 and 4 players.');
+  }
+  const defaultPlayerNames = Array.from({ length: playerCount }, (_, index) => `Player ${index + 1}`);
   const runs: SimulationRun[] = [];
   let totalRounds = 0;
   let totalWars = 0;
@@ -343,8 +365,11 @@ export const runSimulations = (options: {
   let totalLeadChanges = 0;
   let timeouts = 0;
   let stalemates = 0;
-  let players: string[] = [];
+  let players: string[] = [...defaultPlayerNames];
   const wins: Record<string, number> = {};
+  players.forEach((name) => {
+    wins[name] = 0;
+  });
   const warDepthDistribution: Record<number, number> = {};
   const interesting: InterestingMoments = { longestGames: [], deepestWars: [], biggestSwings: [] };
   const traceSampler =
@@ -364,6 +389,7 @@ export const runSimulations = (options: {
       command: 'simulate',
       games: options.games,
       seedBase: options.seedBase,
+      players: playerCount,
       traceMode: traceConfig?.mode,
       traceSampleRate: traceConfig?.sampleRate,
       traceGameIndex: traceConfig?.gameIndex,
@@ -425,15 +451,14 @@ export const runSimulations = (options: {
       },
       collectEvents: !traceThisGame,
       stateHashMode: options.stateHashMode,
+      playerNames: defaultPlayerNames,
     });
     runTracker = runTracker ?? createRunMetricsTracker(result.state);
 
-    if (players.length === 0) {
-      players = result.state.players.map((player) => player.name);
-      players.forEach((name) => {
-        wins[name] = 0;
-      });
-    }
+    players = result.state.players.map((player) => player.name);
+    players.forEach((name) => {
+      wins[name] = wins[name] ?? 0;
+    });
 
     const roundsPlayed = Math.max(result.state.round - 1, 0);
     totalRounds += roundsPlayed;
@@ -676,6 +701,7 @@ export const createSimulateCommand = (): Command => {
     .description('Run War game simulations.')
     .option('--games <count>', 'Number of games to simulate.', parseGameCount, 1)
     .option('--seed <seed>', 'Base seed used to derive per-game seeds.', 'base')
+    .option('--players <count>', 'Number of players (2-4).', parsePlayerCount, 2)
     .option('--json', 'Output results as JSON.')
     .option('--csv', 'Output results as CSV.')
     .option('--md', 'Output results as Markdown tables.')
@@ -743,11 +769,14 @@ export const createSimulateCommand = (): Command => {
           }
         : undefined;
 
+      const playerCount = options.players ?? 2;
+
       const summary = runSimulations({
         games: options.games,
         seedBase: options.seed,
         trace: traceConfig,
         stateHashMode,
+        playerCount,
       });
 
       if (options.json) {

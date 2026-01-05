@@ -121,7 +121,11 @@ const InkPlayApp = ({
     { key: `intro-1`, content: <Text color="magentaBright">Starting War (seed: {seed})</Text> },
     {
       key: `intro-2`,
-      content: <Text>Players: {initialState.players.map((player) => player.name).join(' vs ')}</Text>,
+      content: (
+        <Text>
+          Players: {initialState.players.map((player) => player.name).join(initialState.players.length === 2 ? ' vs ' : ' | ')}
+        </Text>
+      ),
     },
   ]);
 
@@ -250,7 +254,7 @@ const InkPlayApp = ({
       <Text color="magentaBright">
         War (seed: {seed}) <Text color="white">| UI: ink | Autoplay: {autoplay ? 'on' : 'off'}</Text>
       </Text>
-      <Text>Players: {renderState.players.map((player) => player.name).join(' vs ')}</Text>
+      <Text>Players: {renderState.players.map((player) => player.name).join(renderState.players.length === 2 ? ' vs ' : ' | ')}</Text>
       <Box flexDirection="column" marginTop={1}>
         <Text bold>Recent events</Text>
         {log.slice(-10).map((entry) => (
