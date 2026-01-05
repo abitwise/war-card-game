@@ -251,6 +251,45 @@
   - [ ] Add example trace file (small) under `examples/` (optional).
   - [ ] Update any contributor notes for determinism/hashing expectations.
 
+### [P2-8] Support 2–4 Players (Default 2)
+- Status: Backlog
+- Summary: Extend War engine + CLI to support 2–4 players end-to-end while keeping the default experience at 2 players.
+- Context: War is typically 2 players, but 3–4 player support improves simulation value and replay/watchability without changing the core game.
+- Functional behavior (GIVEN/WHEN/THEN):
+  - GIVEN `war play` with no args, WHEN started, THEN it runs with **2 players**.
+  - GIVEN `war play --players "A,B,C"`, WHEN started, THEN it runs with **3 players**.
+  - GIVEN `war play --players "A,B,C,D"`, WHEN started, THEN it runs with **4 players**.
+  - GIVEN `war play --players "A"` OR `--players 1`, WHEN started, THEN the CLI returns a validation error (min 2).
+  - GIVEN `war play --players "A,B,C,D,E"` OR `--players 5`, WHEN started, THEN the CLI returns a validation error (max 4).
+  - GIVEN a round where multiple players tie for highest, WHEN war occurs, THEN **only tied highest players** continue the war and compete for the pot.
+  - GIVEN a player has no cards left (draw+won) mid-game, WHEN a new round starts, THEN they are eliminated and no longer participate.
+  - GIVEN `war simulate --games N --players 4`, WHEN completed, THEN output includes **per-player win counts** and overall stats (round distribution etc.).
+  - GIVEN identical `--seed` and flags, WHEN the run is repeated, THEN outcomes are identical (determinism preserved).
+- Technical notes:
+  - Add player-count support in CLI:
+    - `war play --players "Alice,Bob,Charlie"` (names list)
+    - `war simulate --players 4` (count)
+  - Engine changes:
+    - Replace any 2-player assumptions with `players[]` iteration (N ∈ [2..4]).
+    - Round: all active players flip; highest wins; tie for highest triggers war among tied players only.
+    - Elimination: remove inactive players (no cards) from `activePlayers` each round; game ends when 1 remains.
+  - Rendering changes:
+    - Summary lines for all players (draw/won/total).
+    - War rendering shows only participants placing war cards; others remain idle for that war sequence.
+  - Trace/hashing compatibility (if enabled):
+    - Ensure events always include `playerId`.
+    - Meta includes player list/count; replay remains stable.
+- Tasks:
+  - [ ] Add CLI validation for 2..4 players (names list for `play`, count for `simulate`).
+  - [ ] Update `createGame()` dealing for N players (round-robin; deterministic remainder handling if any).
+  - [ ] Refactor `playRound()`/war resolution to support N players and war among tied-highest subset.
+  - [ ] Implement elimination logic (player with no cards excluded; game ends at 1 remaining).
+  - [ ] Update renderers (play + trace replay) to print N players cleanly (pile counts + flips).
+  - [ ] Update simulation aggregator to track per-player wins for 3–4 players.
+  - [ ] Add unit tests: 3-player and 4-player deterministic runs for fixed seeds; tie/war among subset; elimination; end conditions.
+  - [ ] Update docs/README examples for `--players` usage (2/3/4 players).
+
+
 ## Backlog / Future
 
 ### [F1-2] Advanced Rule Variants
