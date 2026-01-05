@@ -27,3 +27,9 @@
 - Document new rule variants and surface them through CLI options.
 - Keep controllers thin; heavy logic lives in the engine or reusable helpers.
 - When adding features, update `memory-bank/` plans and tickets to stay in sync.
+
+## Memory Bank Maintenance
+- Follow `promps/memory-bank-updater-prompt.md` when recording recent changes so updates stay minimal and high-signal.
+- Update freely: `memory-bank/plans/TICKETS.md`, `memory-bank/plans/PHASE-*.md`, and `memory-bank/plans/tickets/*` for progress or plan adjustments.
+- Update carefully: `ARCHITECTURE.md` and `CONTRIBUTING.md` only when architecture or workflow meaningfully change; update `PRODUCT.md` rarely.
+- Keep phase-specific details within phase plan files; avoid mixing stable, long-term notes with short-lived phase context.
