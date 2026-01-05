@@ -159,7 +159,7 @@ const InkPlayApp = ({
         const result = playRound(state, rngRef.current);
         state = result.state;
         onRoundComplete?.(result);
-        warDetected ||= Boolean(pauseOnWar) && hasWarEvent(result.events);
+        warDetected ||= !!pauseOnWar && hasWarEvent(result.events);
         batchedEntries.push(...formatRoundEvents(result.events, result.state, nextKey, verbosity));
       }
       appendLog(batchedEntries);
