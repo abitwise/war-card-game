@@ -12,7 +12,12 @@ const parseLine = (line: string): TraceRecord => {
   try {
     return JSON.parse(line) as TraceRecord;
   } catch (error) {
-    throw new Error(`Failed to parse trace line: ${line}`);
+    const maxPreviewLength = 100;
+    const isTruncated = line.length > maxPreviewLength;
+    const preview = isTruncated ? `${line.slice(0, maxPreviewLength)}...` : line;
+    throw new Error(
+      `Failed to parse trace line (length=${line.length}${isTruncated ? ', truncated' : ''}): ${preview}`,
+    );
   }
 };
 

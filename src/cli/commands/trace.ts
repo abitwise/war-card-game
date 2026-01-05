@@ -52,7 +52,7 @@ export const createTraceCommand = (): Command => {
     .option('--only <filter>', 'Filter events to show (all|wars|wins|recycles).', 'all')
     .action(async (file: string, options: { from?: number; to?: number; only?: string }) => {
       ensureRoundRange(options.from, options.to);
-      const filter = normalizeFilter(options.only) as TraceViewFilter;
+      const filter = normalizeFilter(options.only);
       await viewTrace(file, { from: options.from, to: options.to, only: filter });
     });
 

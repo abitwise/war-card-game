@@ -109,8 +109,14 @@ const renderEvent = (event: RoundEvent, players: string[]): string[] => {
 const summarizeTrace = (trace: LoadedTrace) => {
   const warCount = trace.events.filter((entry) => entry.event.type === 'WarStarted').length;
   const recycleCount = trace.events.filter((entry) => entry.event.type === 'PileRecycled').length;
-  const ending = [...trace.events].reverse().find((entry) => entry.event.type === 'GameEnded');
-  const endingEvent = ending?.event.type === 'GameEnded' ? ending.event : undefined;
+  let endingEvent: Extract<RoundEvent, { type: 'GameEnded' }> | undefined;
+  for (let i = trace.events.length - 1; i >= 0; i -= 1) {
+    const event = trace.events[i].event;
+    if (event.type === 'GameEnded') {
+      endingEvent = event;
+      break;
+    }
+  }
   const rounds = roundsFromEvents(trace.events);
   return {
     warCount,
@@ -255,7 +261,7 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
         await waitForEnter('War detected. Press Enter to continue...');
       }
     }
-    if (options.speedMs && options.speedMs > 0) {
+    if (options.speedMs) {
       await delay(options.speedMs);
     }
   }
