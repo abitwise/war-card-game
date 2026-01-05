@@ -79,6 +79,11 @@ war simulate [--games <count>] [--seed <seedBase>] [--json | --csv]
 - Use `--trace-sample-rate 0` to trace no games (useful for dry runs or validation).
 - Traces stream directly to disk—no full in-memory history—making them safe for large simulation batches.
 
+### Trace viewing and replay
+
+- Summarize traces: `war trace view out/game.jsonl [--from 10 --to 25] [--only wars|wins|recycles]` prints a readable recap of key events and winners across the selected round range.
+- Replay traces: `war trace replay out/game.jsonl [--verbosity low|normal|high] [--speed <ms>] [--pause-on-war] [--verify]` replays the recorded events. `--verify` re-runs the engine using the trace metadata (seed + rules) and fails fast if the regenerated event stream diverges.
+
 ## Determinism & Seeding
 
 - Decks are shuffled with a seeded RNG; the same seed yields the same game.

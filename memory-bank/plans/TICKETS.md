@@ -131,7 +131,7 @@
   - [x] Document trace format in README (or docs section).
 
 ### [P2-2] Trace View + Replay Commands
-- Status: Backlog
+- Status: Done
 - Summary: Add commands to render traces for humans and to replay traces deterministically.
 - Context: Traces become valuable only when they can be consumed easily.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -146,11 +146,11 @@
     - Replay from recorded events (render-only) when strict verification isn’t required.
   - Provide an option: `--verify` to compare live-generated events to trace events (fails fast on mismatch).
 - Tasks:
-  - [ ] Add `trace` command group in commander.
-  - [ ] Implement `view` (summary + filters).
-  - [ ] Implement `replay` (render loop, speed controls, pause-on-war).
-  - [ ] Implement optional `--verify` (event-by-event check).
-  - [ ] Add tests: replay/verify passes for fixed seed trace.
+  - [x] Add `trace` command group in commander.
+  - [x] Implement `view` (summary + filters).
+  - [x] Implement `replay` (render loop, speed controls, pause-on-war).
+  - [x] Implement optional `--verify` (event-by-event check).
+  - [x] Add tests: replay/verify passes for fixed seed trace.
 
 ### [P2-3] Renderer Verbosity + “Feel the Battle” Visibility
 - Status: Backlog
