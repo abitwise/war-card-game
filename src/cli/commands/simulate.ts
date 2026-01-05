@@ -558,8 +558,8 @@ const renderTextSummary = (summary: SimulationSummary, options?: { hist?: boolea
   console.log('Averages per game:');
   console.log(`- Rounds: ${summary.averageRounds.toFixed(2)}`);
   console.log(`- Wars: ${summary.averageWars.toFixed(2)}`);
-  console.log('- Recycles: ' + (summary.totals.recycles / summary.games).toFixed(2));
-  console.log('- Lead changes: ' + (summary.totals.leadChanges / summary.games).toFixed(2));
+  console.log(`- Recycles: ${(summary.totals.recycles / summary.games).toFixed(2)}`);
+  console.log(`- Lead changes: ${(summary.totals.leadChanges / summary.games).toFixed(2)}`);
   console.log('');
   console.log(
     `Rounds percentiles (p50/p90/p99): ${summary.percentiles.rounds.p50.toFixed(2)} / ${summary.percentiles.rounds.p90.toFixed(2)} / ${summary.percentiles.rounds.p99.toFixed(2)}`,
