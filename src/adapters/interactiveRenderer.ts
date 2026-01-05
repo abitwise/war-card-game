@@ -60,6 +60,11 @@ const formatWarSegments = (
   trick: Extract<RoundEvent, { type: 'TrickWon' }> | undefined,
   verbosity: RendererVerbosity,
 ): string[] => {
+  // This function assumes exactly 2 players
+  if (state.players.length !== 2) {
+    throw new Error(`formatWarSegments only supports 2-player games, but found ${state.players.length} players`);
+  }
+  
   const lines: string[] = [];
   const players = state.players.map((player) => player.name);
   let cursor = 0;
@@ -190,11 +195,7 @@ export const renderRoundEvents = (
     }
   }
 
-  if (state && verbosity === 'low') {
-    lines.push(pileSummary(state));
-  } else if (state && verbosity !== 'low' && cardsPlaced) {
-    lines.push(pileSummary(state));
-  }
+  lines.push(pileSummary(state));
 
   if (gameEnded) {
     const winner = gameEnded.winner !== undefined ? playerName(state, gameEnded.winner) : undefined;
