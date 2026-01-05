@@ -1,4 +1,5 @@
 import { Command, InvalidArgumentError } from 'commander';
+import { dirname, extname, basename, join } from 'node:path';
 import { runGame } from '../../engine/game.js';
 import { createSeededRng } from '../../engine/rng.js';
 import type { RoundResult } from '../../engine/round.js';
@@ -59,8 +60,8 @@ const parseGameCount = (value: string): number => {
 
 const parseSampleRate = (value: string): number => {
   const parsed = Number.parseFloat(value);
-  if (Number.isNaN(parsed) || parsed <= 0 || parsed > 1) {
-    throw new InvalidArgumentError('--trace-sample-rate must be a number between 0 and 1');
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
+    throw new InvalidArgumentError('--trace-sample-rate must be a number between 0 and 1 (inclusive)');
   }
   return parsed;
 };
@@ -138,16 +139,26 @@ export const runSimulations = (options: {
     const endingReasons: SimulationRun['reason'][] = [];
     const onGameStart = traceThisGame
       ? (state: GameState) => {
+          // traceConfig is guaranteed to be defined when traceThisGame is true
+          const config = traceConfig!;
           const meta = createTraceMeta({
             seed,
             state,
             cliArgs: { ...cliArgs, gameIndex: i + 1 },
           });
+          // In sampled mode, append game index to filename to avoid multiple meta records in one file
+          let traceFilePath = config.filePath;
+          if (config.mode === 'sampled') {
+            const ext = extname(traceFilePath);
+            const base = basename(traceFilePath, ext);
+            const dir = dirname(traceFilePath);
+            traceFilePath = join(dir, `${base}-game${i + 1}${ext}`);
+          }
           writer = new TraceWriter(
             {
-              filePath: traceConfig.filePath,
-              includeSnapshots: traceConfig.includeSnapshots,
-              includeTopCards: traceConfig.includeTopCards,
+              filePath: traceFilePath,
+              includeSnapshots: config.includeSnapshots,
+              includeTopCards: config.includeTopCards,
             },
             meta,
           );
@@ -283,6 +294,12 @@ export const createSimulateCommand = (): Command => {
 
       if (traceMode === 'sampled' && options.trace && options.traceSampleRate === undefined) {
         command.error('--trace-sample-rate is required when --trace-mode sampled is used.');
+      }
+
+      if (options.traceGameIndex !== undefined) {
+        if (!Number.isInteger(options.traceGameIndex) || options.traceGameIndex < 1 || options.traceGameIndex > options.games) {
+          command.error(`--trace-game-index must be an integer between 1 and ${options.games}.`);
+        }
       }
 
       const traceConfig: SimulationTraceConfig | undefined = options.trace
