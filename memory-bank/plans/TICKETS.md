@@ -194,7 +194,7 @@
   - [ ] Add tests for deterministic stats on fixed seed sets.
 
 ### [P2-5] Playback Controls: Speed Toggle + Pause-on-War
-- Status: Backlog
+- Status: Done
 - Summary: Enhance “watching” mode with speed control and pause when wars occur.
 - Context: Improves visibility for both live play and trace replay.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -208,10 +208,10 @@
   - Speed model:
     - Accept `--speed` as multiplier OR `--delay-ms` for explicit timing.
 - Tasks:
-  - [ ] Add CLI flags `--speed` and `--pause-on-war`.
-  - [ ] Update interactive loop to respect speed/delay.
-  - [ ] Implement war-detection hook from event stream.
-  - [ ] Add coverage for pause-on-war behavior (unit test with simulated events).
+  - [x] Add CLI flags `--speed` and `--pause-on-war`.
+  - [x] Update interactive loop to respect speed/delay.
+  - [x] Implement war-detection hook from event stream.
+  - [x] Add coverage for pause-on-war behavior (unit test with simulated events).
 
 ### [P2-6] Deterministic State Hashing (Correctness + Regression)
 - Status: Backlog

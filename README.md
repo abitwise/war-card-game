@@ -37,12 +37,13 @@ npx war simulate --games 10 --seed demo --json
 ### Interactive Play
 
 ```bash
-war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>]
+war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>] [--speed <multiplier>] [--delay-ms <ms>] [--pause-on-war]
 ```
 
 - Default seed: `interactive` (use `--seed` to reproduce a game).
 - Controls: `Enter` (next round), `a` (toggle autoplay bursts), `s` (stats), `q` (quit), `?` (help).
 - Output shows per-round events, wars, pile recycling, and game end reasons (win/timeout/stalemate).
+- Playback controls: `--speed` scales the delay between autoplay bursts (higher = faster), `--delay-ms` sets the base delay, and `--pause-on-war` pauses autoplay when a war starts.
 
 **UI modes (Ticket F1-1 – Enhanced TUI with Ink)**
 
@@ -82,7 +83,7 @@ war simulate [--games <count>] [--seed <seedBase>] [--json | --csv]
 ### Trace viewing and replay
 
 - Summarize traces: `war trace view out/game.jsonl [--from 10 --to 25] [--only wars|wins|recycles]` prints a readable recap of key events and winners across the selected round range.
-- Replay traces: `war trace replay out/game.jsonl [--verbosity low|normal|high] [--speed <ms>] [--pause-on-war] [--verify]` replays the recorded events. `--verify` re-runs the engine using the trace metadata (seed + rules) and fails fast if the regenerated event stream diverges.
+- Replay traces: `war trace replay out/game.jsonl [--verbosity low|normal|high] [--speed <multiplier>] [--delay-ms <ms>] [--pause-on-war] [--verify]` replays the recorded events. `--verify` re-runs the engine using the trace metadata (seed + rules) and fails fast if the regenerated event stream diverges.
 
 ## Determinism & Seeding
 

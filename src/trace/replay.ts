@@ -5,6 +5,7 @@ import { createGame } from '../engine/game.js';
 import { playRound, type RoundEvent, type RoundResult } from '../engine/round.js';
 import type { TraceEventRecord, TraceMetaRecord } from './trace.js';
 import { readTraceFile, type LoadedTrace } from './reader.js';
+import { computePlaybackDelayMs, DEFAULT_PLAYBACK_DELAY_MS, hasWarEvent } from '../playback.js';
 
 export type TraceViewFilter = 'all' | 'wars' | 'wins' | 'recycles';
 export type TraceVerbosity = RendererVerbosity;
@@ -20,10 +21,12 @@ export type TraceReplayOptions = {
   from?: number;
   to?: number;
   verbosity?: TraceVerbosity;
-  speedMs?: number;
+  speed?: number;
+  delayMs?: number;
   pauseOnWar?: boolean;
   verify?: boolean;
   output?: (line: string) => void;
+  waitForContinue?: (message: string) => Promise<void>;
 };
 
 const playerName = (players: string[], playerId: number): string => players[playerId] ?? `Player ${playerId + 1}`;
@@ -250,10 +253,14 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
   const seedInitialState = createGame({ seed: trace.meta.seed, rules: trace.meta.rules, playerNames: trace.meta.players }).state;
   const initialState = roundResults[0]?.state ?? seedInitialState;
   const fallbackState = roundResults[roundResults.length - 1]?.state ?? initialState;
+  const waitForContinue = options.waitForContinue ?? waitForEnter;
+  const playbackDelayMs = computePlaybackDelayMs(options.speed, options.delayMs, DEFAULT_PLAYBACK_DELAY_MS);
 
   output(`Replaying trace for seed ${trace.meta.seed}`);
   output(`Players: ${trace.meta.players.join(' vs ')}`);
-  output(`Rounds ${from}-${to}${options.pauseOnWar ? ' | pause on war' : ''}${options.speedMs ? ` | ${options.speedMs}ms delay` : ''}`);
+  const speedLabel = options.speed && options.speed !== 1 ? ` | speed x${options.speed}` : '';
+  const delayLabel = playbackDelayMs > 0 ? ` | ${playbackDelayMs}ms delay` : '';
+  output(`Rounds ${from}-${to}${options.pauseOnWar ? ' | pause on war' : ''}${speedLabel}${delayLabel}`);
 
   for (const round of rounds) {
     if (round < from || round > to) continue;
@@ -266,15 +273,11 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
       state = fallbackState;
     }
     renderRoundEvents(roundEvents, state, output, verbosity);
-    if (options.pauseOnWar) {
-      for (const event of roundEvents) {
-        if (event.type === 'WarStarted') {
-          await waitForEnter('War detected. Press Enter to continue...');
-        }
-      }
+    if (options.pauseOnWar && hasWarEvent(roundEvents)) {
+      await waitForContinue('War detected. Press Enter to continue...');
     }
-    if (options.speedMs) {
-      await delay(options.speedMs);
+    if (playbackDelayMs > 0) {
+      await delay(playbackDelayMs);
     }
   }
 
