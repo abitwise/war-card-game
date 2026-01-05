@@ -195,9 +195,7 @@ export const renderRoundEvents = (
     }
   }
 
-  if (state) {
-    lines.push(pileSummary(state));
-  }
+  lines.push(pileSummary(state));
 
   if (gameEnded) {
     const winner = gameEnded.winner !== undefined ? playerName(state, gameEnded.winner) : undefined;
