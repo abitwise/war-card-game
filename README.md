@@ -66,6 +66,19 @@ war simulate [--games <count>] [--seed <seedBase>] [--json | --csv]
 - `--json` prints a structured summary; `--csv` prints a metric/value table. Use only one of these flags at a time.
 - Reports wins per player, timeouts, stalemates, average rounds, and average wars. Per-game seeds derive from `<seedBase>-<index>`.
 
+### Tracing (JSONL)
+
+- Record interactive games: `war play --trace out/game.jsonl [--trace-snapshots] [--trace-top-cards]`.
+- Record simulations: `war simulate --trace out/games.jsonl [--trace-mode single|sampled] [--trace-game-index 3 | --trace-sample-rate 0.05] [--trace-snapshots] [--trace-top-cards]`.
+- Format: JSONL with a meta header followed by round-ordered records:
+  - Meta: `{ type: "meta", version, engineVersion, timestamp, seed, rules, cliArgs, players, maxRounds }`
+  - Events: `{ type: "event", round, event: <RoundEvent> }`
+  - Snapshots (when enabled): `{ type: "snapshot", round, pileCounts, topCards? }`
+- In `war play` and `war simulate --trace-mode single`, the trace file contains one game: a single meta record followed by that game's events (and snapshots, if enabled).
+- In `war simulate --trace-mode sampled`, each sampled game writes to a separate file. The `--trace` path is used as a base, and each traced game appends its game index to the filename (e.g., `out/games-game5.jsonl`, `out/games-game12.jsonl`).
+- Use `--trace-sample-rate 0` to trace no games (useful for dry runs or validation).
+- Traces stream directly to disk—no full in-memory history—making them safe for large simulation batches.
+
 ## Determinism & Seeding
 
 - Decks are shuffled with a seeded RNG; the same seed yields the same game.

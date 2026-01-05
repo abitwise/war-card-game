@@ -15,6 +15,8 @@ type PromptContext = {
 
 export type PromptHandler = (context: PromptContext) => Promise<PromptAction>;
 
+export type RoundCompleteHandler = (result: { state: GameState; events: RoundEvent[] }) => void;
+
 export type PlayOptions = {
   seed?: string;
   rules?: WarRulesInput;
@@ -23,6 +25,8 @@ export type PlayOptions = {
   autoplayBurst?: number;
   playerNames?: string[];
   startAutoplay?: boolean;
+  onGameStart?: (state: GameState) => void;
+  onRoundComplete?: RoundCompleteHandler;
 };
 
 const parseAction = (value: string): PromptAction => {
@@ -46,9 +50,11 @@ const playRoundAndRender = (
   state: GameState,
   rng: ReturnType<typeof createGame>['rng'],
   output: (line: string) => void,
+  onRoundComplete?: RoundCompleteHandler,
 ): { state: GameState; events: RoundEvent[] } => {
   const result = playRound(state, rng);
   renderRoundEvents(result.events, result.state, output);
+  onRoundComplete?.(result);
   return result;
 };
 
@@ -64,6 +70,8 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
     playerNames: options.playerNames,
   });
 
+  options.onGameStart?.(initialState);
+
   let state = initialState;
   let autoplay = options.startAutoplay ?? false;
 
@@ -76,7 +84,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
     if (autoplay && state.active) {
       let roundsPlayed = 0;
       while (state.active && roundsPlayed < autoplayBurst) {
-        const result = playRoundAndRender(state, rng, output);
+        const result = playRoundAndRender(state, rng, output, options.onRoundComplete);
         state = result.state;
         roundsPlayed += 1;
       }
@@ -104,7 +112,7 @@ export const playInteractiveGame = async (options: PlayOptions = {}) => {
       continue;
     }
 
-    const result = playRoundAndRender(state, rng, output);
+    const result = playRoundAndRender(state, rng, output, options.onRoundComplete);
     state = result.state;
   }
 

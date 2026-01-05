@@ -108,7 +108,7 @@
 ## Phase 2 (Next) — Visibility, Traces, and Simulation Analytics
 
 ### [P2-1] Trace Schema + Streaming Writer (JSONL)
-- Status: Backlog
+- Status: Done
 - Summary: Add a compact, append-only trace format that captures full game history as a first-class artifact.
 - Context: The game is mostly about simulation; traces enable inspection, sharing, replay, and debugging.
 - Functional behavior (GIVEN/WHEN/THEN):
@@ -124,11 +124,11 @@
     - `war simulate --trace out/games.jsonl --trace-mode single|sampled`
     - `--trace-sample-rate 0.01` OR `--trace-game-index 123`
 - Tasks:
-  - [ ] Define `TraceRecord` types and versioned schema.
-  - [ ] Implement `TraceWriter` (streaming, flush on exit).
-  - [ ] Wire `--trace*` flags into `play` and `simulate`.
-  - [ ] Add tests: trace contains meta + ordered events for a known seed.
-  - [ ] Document trace format in README (or docs section).
+  - [x] Define `TraceRecord` types and versioned schema.
+  - [x] Implement `TraceWriter` (streaming, flush on exit).
+  - [x] Wire `--trace*` flags into `play` and `simulate`.
+  - [x] Add tests: trace contains meta + ordered events for a known seed.
+  - [x] Document trace format in README (or docs section).
 
 ### [P2-2] Trace View + Replay Commands
 - Status: Backlog

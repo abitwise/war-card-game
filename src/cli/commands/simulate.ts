@@ -1,11 +1,33 @@
 import { Command, InvalidArgumentError } from 'commander';
+import { dirname, extname, basename, join } from 'node:path';
 import { runGame } from '../../engine/game.js';
+import { createSeededRng } from '../../engine/rng.js';
+import type { RoundResult } from '../../engine/round.js';
+import type { GameState } from '../../engine/state.js';
+import { createTraceMeta, TraceWriter } from '../../trace/trace.js';
+
+type TraceMode = 'single' | 'sampled';
 
 type SimulateOptions = {
   games: number;
   seed: string;
   json?: boolean;
   csv?: boolean;
+  trace?: string;
+  traceMode?: TraceMode;
+  traceSampleRate?: number;
+  traceGameIndex?: number;
+  traceSnapshots?: boolean;
+  traceTopCards?: boolean;
+};
+
+type SimulationTraceConfig = {
+  filePath: string;
+  mode: TraceMode;
+  sampleRate?: number;
+  gameIndex?: number;
+  includeSnapshots?: boolean;
+  includeTopCards?: boolean;
 };
 
 export type SimulationRun = {
@@ -36,6 +58,22 @@ const parseGameCount = (value: string): number => {
   return parsed;
 };
 
+const parseSampleRate = (value: string): number => {
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
+    throw new InvalidArgumentError('--trace-sample-rate must be a number between 0 and 1 (inclusive)');
+  }
+  return parsed;
+};
+
+const parseGameIndex = (value: string): number => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new InvalidArgumentError('--trace-game-index must be a positive integer');
+  }
+  return parsed;
+};
+
 const endingFromEvents = (events: { type: string; reason?: SimulationRun['reason'] }[]): SimulationRun['reason'][] =>
   events
     .filter(
@@ -57,7 +95,21 @@ const determineEndingReason = (events: SimulationRun['reason'][], winner?: numbe
   return winner === undefined ? 'stalemate' : 'win';
 };
 
-export const runSimulations = (options: { games: number; seedBase: string }): SimulationSummary => {
+const shouldTraceGame = (index: number, options: SimulationTraceConfig, sampler?: () => number): boolean => {
+  if (options.mode === 'single') {
+    const target = options.gameIndex ?? 1;
+    return target === index + 1;
+  }
+  const rate = options.sampleRate ?? 0;
+  const roll = sampler ? sampler() : Math.random();
+  return roll < rate;
+};
+
+export const runSimulations = (options: {
+  games: number;
+  seedBase: string;
+  trace?: SimulationTraceConfig;
+}): SimulationSummary => {
   const runs: SimulationRun[] = [];
   let totalRounds = 0;
   let totalWars = 0;
@@ -65,10 +117,62 @@ export const runSimulations = (options: { games: number; seedBase: string }): Si
   let stalemates = 0;
   let players: string[] = [];
   const wins: Record<string, number> = {};
+  const traceSampler =
+    options.trace?.mode === 'sampled' ? createSeededRng(`${options.seedBase}-trace-sampler`) : undefined;
 
   for (let i = 0; i < options.games; i += 1) {
     const seed = `${options.seedBase}-${i + 1}`;
-    const result = runGame({ seed });
+    const traceConfig = options.trace;
+    const traceThisGame = traceConfig ? shouldTraceGame(i, traceConfig, traceSampler) : false;
+    const cliArgs = {
+      command: 'simulate',
+      games: options.games,
+      seedBase: options.seedBase,
+      traceMode: traceConfig?.mode,
+      traceSampleRate: traceConfig?.sampleRate,
+      traceGameIndex: traceConfig?.gameIndex,
+      traceSnapshots: traceConfig?.includeSnapshots,
+      traceTopCards: traceConfig?.includeTopCards,
+    };
+
+    let writer: TraceWriter | undefined;
+    const endingReasons: SimulationRun['reason'][] = [];
+    const onGameStart = traceThisGame
+      ? (state: GameState) => {
+          // traceConfig is guaranteed to be defined when traceThisGame is true
+          const config = traceConfig!;
+          const meta = createTraceMeta({
+            seed,
+            state,
+            cliArgs: { ...cliArgs, gameIndex: i + 1 },
+          });
+          // In sampled mode, append game index to filename to avoid multiple meta records in one file
+          let traceFilePath = config.filePath;
+          if (config.mode === 'sampled') {
+            const ext = extname(traceFilePath);
+            const base = basename(traceFilePath, ext);
+            const dir = dirname(traceFilePath);
+            traceFilePath = join(dir, `${base}-game${i + 1}${ext}`);
+          }
+          writer = new TraceWriter(
+            {
+              filePath: traceFilePath,
+              includeSnapshots: config.includeSnapshots,
+              includeTopCards: config.includeTopCards,
+            },
+            meta,
+          );
+        }
+      : undefined;
+    const result = runGame({
+      seed,
+      onGameStart,
+      onRound: (roundResult: RoundResult) => {
+        endingReasons.push(...endingFromEvents(roundResult.events));
+        writer?.recordRound(roundResult);
+      },
+      collectEvents: !traceThisGame,
+    });
     if (players.length === 0) {
       players = result.state.players.map((player) => player.name);
       players.forEach((name) => {
@@ -80,8 +184,8 @@ export const runSimulations = (options: { games: number; seedBase: string }): Si
     totalRounds += roundsPlayed;
     totalWars += result.state.stats.wars;
 
-    const endingReasons = endingFromEvents(result.events);
-    const reason = determineEndingReason(endingReasons, result.state.winner);
+    const endingReasonsForResult = endingReasons.length > 0 ? endingReasons : endingFromEvents(result.events);
+    const reason = determineEndingReason(endingReasonsForResult, result.state.winner);
     if (reason === 'timeout') {
       timeouts += 1;
     } else if (reason === 'stalemate') {
@@ -156,12 +260,60 @@ export const createSimulateCommand = (): Command => {
     .option('--seed <seed>', 'Base seed used to derive per-game seeds.', 'base')
     .option('--json', 'Output results as JSON.')
     .option('--csv', 'Output results as CSV.')
+    .option('--trace <file>', 'Write a JSONL trace file for simulated games.')
+    .option('--trace-mode <mode>', 'Trace mode: single (default) or sampled.', 'single')
+    .option('--trace-sample-rate <rate>', 'Sample rate for tracing games when using sampled mode.', parseSampleRate)
+    .option('--trace-game-index <index>', 'Game index to trace in single mode (1-based).', parseGameIndex)
+    .option('--trace-snapshots', 'Include per-round snapshots in the trace.')
+    .option('--trace-top-cards', 'Include top-card details when snapshots are enabled.')
     .action((options: SimulateOptions) => {
       if (options.json && options.csv) {
         command.error('Cannot use --json and --csv together.');
       }
 
-      const summary = runSimulations({ games: options.games, seedBase: options.seed });
+      const traceMode = (options.traceMode ?? 'single').toLowerCase();
+      if (traceMode !== 'single' && traceMode !== 'sampled') {
+        command.error('Invalid --trace-mode. Use "single" or "sampled".');
+      }
+
+      if (!options.trace && (options.traceSampleRate !== undefined || options.traceGameIndex !== undefined)) {
+        command.error('Trace sampling options require --trace to be provided.');
+      }
+
+      if (options.traceTopCards && !options.traceSnapshots) {
+        command.error('--trace-top-cards requires --trace-snapshots.');
+      }
+
+      if (traceMode === 'sampled' && options.traceGameIndex !== undefined) {
+        command.error('--trace-game-index is only valid for single trace mode.');
+      }
+
+      if (traceMode === 'single' && options.traceSampleRate !== undefined) {
+        command.error('--trace-sample-rate is only valid for sampled trace mode.');
+      }
+
+      if (traceMode === 'sampled' && options.trace && options.traceSampleRate === undefined) {
+        command.error('--trace-sample-rate is required when --trace-mode sampled is used.');
+      }
+
+      if (options.traceGameIndex !== undefined) {
+        if (!Number.isInteger(options.traceGameIndex) || options.traceGameIndex < 1 || options.traceGameIndex > options.games) {
+          command.error(`--trace-game-index must be an integer between 1 and ${options.games}.`);
+        }
+      }
+
+      const traceConfig: SimulationTraceConfig | undefined = options.trace
+        ? {
+            filePath: options.trace,
+            mode: traceMode as TraceMode,
+            sampleRate: traceMode === 'sampled' ? options.traceSampleRate : undefined,
+            gameIndex: traceMode === 'single' ? options.traceGameIndex : undefined,
+            includeSnapshots: Boolean(options.traceSnapshots),
+            includeTopCards: Boolean(options.traceTopCards),
+          }
+        : undefined;
+
+      const summary = runSimulations({ games: options.games, seedBase: options.seed, trace: traceConfig });
 
       if (options.json) {
         console.log(JSON.stringify(summary, null, 2));
