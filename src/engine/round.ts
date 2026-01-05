@@ -6,8 +6,8 @@ import type { GameState, TableCard } from './state.js';
 
 export type RoundEvent =
   | { type: 'RoundStarted'; round: number }
-  | { type: 'CardsPlaced'; cards: TableCard[] }
-  | { type: 'WarStarted'; warLevel: number }
+  | { type: 'CardsPlaced'; cards: TableCard[]; participants?: number[] }
+  | { type: 'WarStarted'; warLevel: number; participants?: number[] }
   | { type: 'PileRecycled'; playerId: number; cards: number; shuffled: boolean }
   | { type: 'TrickWon'; winner: number; collected: TableCard[] }
   | { type: 'StateHashed'; round: number; mode: Exclude<StateHashMode, 'off'>; hash: string }
@@ -79,13 +79,6 @@ const collectCards = (state: GameState, winnerId: number, cards: TableCard[]) =>
   }
 };
 
-const determineRoundWinner = (faceUpA: TableCard, faceUpB: TableCard): number | undefined => {
-  if (faceUpA.card.rank === faceUpB.card.rank) {
-    return undefined;
-  }
-  return faceUpA.card.rank > faceUpB.card.rank ? faceUpA.playerId : faceUpB.playerId;
-};
-
 export const playRound = (inputState: GameState, rng: RNG, stateHashMode: StateHashMode = 'off'): RoundResult => {
   if (!inputState.active) {
     return { state: inputState, events: [] };
@@ -123,87 +116,103 @@ export const playRound = (inputState: GameState, rng: RNG, stateHashMode: StateH
     return drawFaceUp(playerId);
   };
 
-  const initialA = drawFaceUp(0);
-  const initialB = drawFaceUp(1);
-  if (!initialA && !initialB) {
+  const activePlayers = state.players
+    .map((player, index) => ({ index, cards: totalCards(player) }))
+    .filter((entry) => entry.cards > 0)
+    .map((entry) => entry.index);
+
+  const handleNoContest = (): RoundResult => {
     state.round += 1;
     state.active = false;
+    state.table.inWar = false;
     events.push({ type: 'GameEnded', reason: 'stalemate' });
     pushHashEvent();
     return { state, events };
+  };
+
+  if (activePlayers.length === 0) {
+    return handleNoContest();
   }
-  if (!initialA || !initialB) {
-    const winner = initialA ? 0 : 1;
-    const collected = [...state.table.battleCards];
-    collectCards(state, winner, state.table.battleCards);
+  if (activePlayers.length === 1) {
+    const winner = activePlayers[0];
     state.round += 1;
-    state.winner = winner;
     state.active = false;
-    state.table.battleCards = [];
-    state.table.inWar = false;
-    events.push({ type: 'TrickWon', winner, collected });
+    state.winner = winner;
     events.push({ type: 'GameEnded', reason: 'win', winner });
     pushHashEvent();
     return { state, events };
   }
 
-  let roundWinner: number | undefined = determineRoundWinner(initialA, initialB);
+  const faceUps: TableCard[] = [];
+  activePlayers.forEach((playerId) => {
+    const card = drawFaceUp(playerId);
+    if (card) {
+      faceUps.push(card);
+    }
+  });
 
-  while (roundWinner === undefined) {
+  const highestRank = faceUps.reduce((max, entry) => Math.max(max, entry.card.rank), -Infinity);
+  const contenders = faceUps.filter((entry) => entry.card.rank === highestRank).map((entry) => entry.playerId);
+
+  let roundWinner: number | undefined = contenders.length === 1 ? contenders[0] : undefined;
+  let warParticipants: number[] = [...contenders];
+
+  while (roundWinner === undefined && warParticipants.length > 1) {
     warLevel += 1;
     state.table.inWar = true;
     state.stats.wars += 1;
-    events.push({ type: 'WarStarted', warLevel });
+    events.push({ type: 'WarStarted', warLevel, participants: [...warParticipants] });
 
-    if (state.config.tieResolution === 'sudden-death') {
-      const nextA = drawFaceUp(0);
-      const nextB = drawFaceUp(1);
-      if (!nextA || !nextB) {
-        roundWinner = nextA ? 0 : nextB ? 1 : undefined;
-        break;
+    const warFaceUps: TableCard[] = [];
+    warParticipants.forEach((playerId) => {
+      const faceUp =
+        state.config.tieResolution === 'sudden-death' ? drawFaceUp(playerId) : drawWarPackage(playerId);
+      if (faceUp) {
+        warFaceUps.push(faceUp);
       }
-      roundWinner = determineRoundWinner(nextA, nextB);
-      continue;
-    }
+    });
 
-    const warA = drawWarPackage(0);
-    const warB = drawWarPackage(1);
-    if (!warA || !warB) {
-      roundWinner = warA ? 0 : warB ? 1 : undefined;
+    const warHighestRank = warFaceUps.reduce((max, entry) => Math.max(max, entry.card.rank), -Infinity);
+    const tied = warFaceUps.filter((entry) => entry.card.rank === warHighestRank).map((entry) => entry.playerId);
+
+    if (tied.length === 0) {
       break;
     }
-    roundWinner = determineRoundWinner(warA, warB);
+    if (tied.length === 1) {
+      roundWinner = tied[0];
+      break;
+    }
+    warParticipants = tied;
   }
 
   if (roundWinner === undefined) {
-    state.round += 1;
-    state.active = false;
-    events.push({ type: 'GameEnded', reason: 'stalemate' });
-    pushHashEvent();
-    return { state, events };
+    return handleNoContest();
   }
 
-  collectCards(state, roundWinner, state.table.battleCards);
-  events.push({ type: 'CardsPlaced', cards: [...state.table.battleCards] });
-  events.push({ type: 'TrickWon', winner: roundWinner, collected: [...state.table.battleCards] });
-
-  const otherPlayer = roundWinner === 0 ? 1 : 0;
-  const winnerCards = totalCards(state.players[roundWinner]);
-  const loserCards = totalCards(state.players[otherPlayer]);
+  const participantsForRound = activePlayers;
+  const collected = [...state.table.battleCards];
+  collectCards(state, roundWinner, collected);
+  events.push({ type: 'CardsPlaced', cards: collected, participants: participantsForRound });
+  events.push({ type: 'TrickWon', winner: roundWinner, collected });
 
   state.round += 1;
+  state.table = { battleCards: [], inWar: false };
 
-  if (loserCards === 0 && winnerCards > 0) {
+  const remainingPlayers = state.players
+    .map((player, index) => ({ index, cards: totalCards(player) }))
+    .filter((entry) => entry.cards > 0)
+    .map((entry) => entry.index);
+
+  if (remainingPlayers.length === 1 && totalCards(state.players[remainingPlayers[0]]) > 0) {
     state.active = false;
-    state.winner = roundWinner;
-    state.table = { battleCards: [], inWar: false };
-    events.push({ type: 'GameEnded', reason: 'win', winner: roundWinner });
-  } else {
-    state.table = { battleCards: [], inWar: false };
-    if (state.config.maxRounds !== undefined && state.round > state.config.maxRounds) {
-      state.active = false;
-      events.push({ type: 'GameEnded', reason: 'timeout' });
-    }
+    state.winner = remainingPlayers[0];
+    events.push({ type: 'GameEnded', reason: 'win', winner: remainingPlayers[0] });
+  } else if (remainingPlayers.length === 0) {
+    state.active = false;
+    events.push({ type: 'GameEnded', reason: 'stalemate' });
+  } else if (state.config.maxRounds !== undefined && state.round > state.config.maxRounds) {
+    state.active = false;
+    events.push({ type: 'GameEnded', reason: 'timeout' });
   }
 
   pushHashEvent();

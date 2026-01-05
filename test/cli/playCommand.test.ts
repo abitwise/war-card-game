@@ -84,4 +84,20 @@ describe('createPlayCommand', () => {
     const { runInkPlay } = await import('../../src/adapters/inkPlay.js');
     expect(runInkPlay).toHaveBeenCalledWith(expect.objectContaining({ verbosity: 'high' }));
   });
+
+  it('passes player names to the selected UI', async () => {
+    const command = createPlayCommand().exitOverride();
+    await parseCommand(command, ['--players', 'Alice,Bob,Charlie']);
+
+    const { runInkPlay } = await import('../../src/adapters/inkPlay.js');
+    expect(runInkPlay).toHaveBeenCalledWith(
+      expect.objectContaining({ playerNames: ['Alice', 'Bob', 'Charlie'], seed: 'interactive' }),
+    );
+  });
+
+  it('rejects invalid player counts', async () => {
+    const command = createPlayCommand().exitOverride();
+
+    await expect(parseCommand(command, ['--players', 'Solo'])).rejects.toThrow(/players requires between 2 and 4/);
+  });
 });

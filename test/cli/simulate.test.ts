@@ -13,6 +13,15 @@ describe('runSimulations', () => {
     expect(second).toEqual(first);
   });
 
+  it('supports multi-player simulations with per-player win tracking', () => {
+    const summary = runSimulations({ games: 2, seedBase: 'three-player', playerCount: 3 });
+    const repeat = runSimulations({ games: 2, seedBase: 'three-player', playerCount: 3 });
+
+    expect(summary.players).toEqual(['Player 1', 'Player 2', 'Player 3']);
+    expect(Object.keys(summary.wins)).toHaveLength(3);
+    expect(summary).toEqual(repeat);
+  });
+
   it('writes separate files for each traced game in sampled mode', () => {
     const dir = mkdtempSync(join(tmpdir(), 'war-sampled-trace-'));
     const basePath = join(dir, 'games.jsonl');
@@ -184,6 +193,17 @@ describe('simulate command', () => {
     await expect(command.parseAsync(['node', 'war', 'simulate', '--games', '0'], { from: 'user' })).rejects.toThrow(
       /positive integer/,
     );
+  });
+
+  it('validates player count', async () => {
+    const command = createSimulateCommand().exitOverride();
+
+    await expect(
+      command.parseAsync(['node', 'war', 'simulate', '--games', '1', '--players', '1'], { from: 'user' }),
+    ).rejects.toThrow(/players must be an integer between 2 and 4/);
+    await expect(
+      command.parseAsync(['node', 'war', 'simulate', '--games', '1', '--players', '5'], { from: 'user' }),
+    ).rejects.toThrow(/players must be an integer between 2 and 4/);
   });
 
   it('validates trace sampling arguments', async () => {

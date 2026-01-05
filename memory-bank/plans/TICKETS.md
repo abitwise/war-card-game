@@ -252,7 +252,7 @@
   - [x] Update any contributor notes for determinism/hashing expectations.
 
 ### [P2-8] Support 2–4 Players (Default 2)
-- Status: Backlog
+- Status: Done
 - Summary: Extend War engine + CLI to support 2–4 players end-to-end while keeping the default experience at 2 players.
 - Context: War is typically 2 players, but 3–4 player support improves simulation value and replay/watchability without changing the core game.
 - Functional behavior (GIVEN/WHEN/THEN):

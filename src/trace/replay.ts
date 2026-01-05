@@ -48,6 +48,8 @@ const roundsFromEvents = (events: TraceEventRecord[]): number[] => {
   return rounds;
 };
 
+const formatPlayers = (players: string[]): string => players.join(players.length === 2 ? ' vs ' : ' | ');
+
 const shouldRenderEvent = (event: RoundEvent, filter: TraceViewFilter): boolean => {
   if (event.type === 'GameEnded') return true;
   if (filter === 'all') return event.type !== 'RoundStarted';
@@ -65,10 +67,18 @@ const formatCardsPlaced = (players: string[], cards: Extract<RoundEvent, { type:
     return acc;
   }, {});
 
+  const order =
+    cards.participants && cards.participants.length > 0
+      ? cards.participants
+      : Object.keys(grouped)
+          .map((key) => Number.parseInt(key, 10))
+          .sort((a, b) => a - b);
+
   const lines: string[] = [];
-  Object.entries(grouped).forEach(([id, entries]) => {
-    const name = playerName(players, Number.parseInt(id, 10));
-    const formatted = entries.map((entry) => formatTableCard(entry)).join(', ');
+  order.forEach((id) => {
+    const entries = grouped[id] ?? [];
+    const name = playerName(players, id);
+    const formatted = entries.length > 0 ? entries.map((entry) => formatTableCard(entry)).join(', ') : '—';
     lines.push(`${name} played: ${formatted}`);
   });
   return lines;
@@ -209,7 +219,7 @@ export const viewTrace = async (filePath: string, options: TraceViewOptions = {}
 
   output(`Trace: ${filePath}`);
   output(`Seed: ${trace.meta.seed}`);
-  output(`Players: ${trace.meta.players.join(' vs ')}`);
+  output(`Players: ${formatPlayers(trace.meta.players)}`);
   output(`Rounds recorded: ${summary.roundCount} | Wars: ${summary.warCount} | Recycles: ${summary.recycleCount}`);
   if (summary.endingEvent) {
     const winner = summary.endingEvent.winner !== undefined ? playerName(trace.meta.players, summary.endingEvent.winner) : undefined;
@@ -265,7 +275,7 @@ export const replayTrace = async (filePath: string, options: TraceReplayOptions 
   const playbackDelayMs = computePlaybackDelayMs(options.speed, options.delayMs, DEFAULT_PLAYBACK_DELAY_MS);
 
   output(`Replaying trace for seed ${trace.meta.seed}`);
-  output(`Players: ${trace.meta.players.join(' vs ')}`);
+  output(`Players: ${formatPlayers(trace.meta.players)}`);
   const speedLabel = options.speed && options.speed !== 1 ? ` | speed x${options.speed}` : '';
   const delayLabel = playbackDelayMs > 0 ? ` | ${playbackDelayMs}ms delay` : '';
   output(`Rounds ${from}-${to}${options.pauseOnWar ? ' | pause on war' : ''}${speedLabel}${delayLabel}`);

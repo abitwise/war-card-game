@@ -53,23 +53,29 @@ const formatCardSequence = (cards: TableCard[], playerId: number): string => {
   return sequence.length > 0 ? sequence.join(', ') : '—';
 };
 
-const formatWarSegments = (
+type WarStage = {
+  level: number;
+  participants: number[];
+  down: Record<number, TableCard[]>;
+  up: Record<number, TableCard | undefined>;
+};
+
+type RoundStructure = {
+  participants: number[];
+  initial: Record<number, TableCard | undefined>;
+  wars: WarStage[];
+};
+
+const buildRoundStructure = (
   cards: TableCard[],
   warEvents: Extract<RoundEvent, { type: 'WarStarted' }>[],
-  state: GameState,
-  trick: Extract<RoundEvent, { type: 'TrickWon' }> | undefined,
-  verbosity: RendererVerbosity,
-): string[] => {
-  // This function assumes exactly 2 players
-  if (state.players.length !== 2) {
-    throw new Error(`formatWarSegments only supports 2-player games, but found ${state.players.length} players`);
-  }
-  
-  const lines: string[] = [];
-  const players = state.players.map((player) => player.name);
+  participants: number[],
+  warFaceDownCount: number,
+  suddenDeath: boolean,
+): RoundStructure => {
   let cursor = 0;
 
-  const takeIf = (playerId: number, faceDown: boolean): TableCard | undefined => {
+  const consumeCard = (playerId: number, faceDown: boolean): TableCard | undefined => {
     const next = cards[cursor];
     if (next && next.playerId === playerId && next.faceDown === faceDown) {
       cursor += 1;
@@ -78,68 +84,131 @@ const formatWarSegments = (
     return undefined;
   };
 
-  const initialA = takeIf(0, false);
-  const initialB = takeIf(1, false);
-  if (initialA || initialB) {
-    const tie =
-      initialA && initialB && initialA.card.rank === initialB.card.rank
-        ? ` ${chalk.yellow(`(tie on ${rankLabel(initialA.card.rank)})`)}`
-        : '';
-    const baseLine = [
-      'Flip:',
-      `${players[0]}: ${initialA ? formatTableCard(initialA) : '—'}`,
-      'vs',
-      `${players[1]}: ${initialB ? formatTableCard(initialB) : '—'}${tie}`,
-    ]
-      .filter(Boolean)
-      .join(' ');
-    lines.push(baseLine);
+  const initial: Record<number, TableCard | undefined> = {};
+  participants.forEach((playerId) => {
+    const faceUp = consumeCard(playerId, false);
+    if (faceUp) {
+      initial[playerId] = faceUp;
+    }
+  });
+
+  const wars: WarStage[] = warEvents.map((event) => {
+    const warParticipants = event.participants && event.participants.length > 0 ? event.participants : participants;
+    const down: Record<number, TableCard[]> = {};
+    const up: Record<number, TableCard | undefined> = {};
+    warParticipants.forEach((playerId) => {
+      const downCards: TableCard[] = [];
+      if (!suddenDeath) {
+        for (let i = 0; i < warFaceDownCount; i += 1) {
+          const card = consumeCard(playerId, true);
+          if (card) {
+            downCards.push(card);
+          }
+        }
+      }
+      const faceUp = consumeCard(playerId, false);
+      down[playerId] = downCards;
+      up[playerId] = faceUp;
+    });
+    return { level: event.warLevel, participants: warParticipants, down, up };
+  });
+
+  return { participants, initial, wars };
+};
+
+const formatParticipantsLine = (label: string, entries: string[]): string => {
+  return `${label}: ${entries.join('  ')}`;
+};
+
+const formatWarSegments = (
+  cards: Extract<RoundEvent, { type: 'CardsPlaced' }>,
+  warEvents: Extract<RoundEvent, { type: 'WarStarted' }>[],
+  state: GameState,
+  trick: Extract<RoundEvent, { type: 'TrickWon' }> | undefined,
+  verbosity: RendererVerbosity,
+): string[] => {
+  const participants =
+    cards.participants && cards.participants.length > 0 ? cards.participants : state.players.map((_, index) => index);
+  const structure = buildRoundStructure(
+    cards.cards,
+    warEvents,
+    participants,
+    state.config.warFaceDownCount,
+    state.config.tieResolution === 'sudden-death',
+  );
+
+  const lines: string[] = [];
+  const highestInitial = Math.max(
+    -Infinity,
+    ...structure.participants
+      .map((id) => structure.initial[id]?.card.rank)
+      .filter((rank): rank is number => rank !== undefined),
+  );
+  const initialTied =
+    highestInitial > -Infinity
+      ? structure.participants.filter((id) => structure.initial[id]?.card.rank === highestInitial)
+      : [];
+
+  if (structure.participants.length > 0) {
+    const initialEntries =
+      structure.participants.length === 2
+        ? [
+            `${playerName(state, structure.participants[0])}: ${structure.initial[structure.participants[0]] ? formatTableCard(structure.initial[structure.participants[0]]!) : '—'}`,
+            'vs',
+            `${playerName(state, structure.participants[1])}: ${structure.initial[structure.participants[1]] ? formatTableCard(structure.initial[structure.participants[1]]!) : '—'}`,
+          ]
+        : structure.participants.map((id) => {
+            const card = structure.initial[id];
+            return `${playerName(state, id)}: ${card ? formatTableCard(card) : '—'}`;
+          });
+
+    const tieLabel = initialTied.length > 1 ? ` ${chalk.yellow(`(tie on ${rankLabel(highestInitial)})`)}` : '';
+    const joiner = structure.participants.length === 2 ? ' ' : ' | ';
+    lines.push(`Flip: ${initialEntries.join(joiner)}${tieLabel}`);
   }
 
-  let lastTieRank =
-    initialA && initialB && initialA.card.rank === initialB.card.rank ? initialA.card.rank : undefined;
+  let lastTieRank = initialTied.length > 1 ? highestInitial : undefined;
 
-  warEvents.forEach((event, index) => {
-    lines.push(chalk.redBright(`WAR! (level ${event.warLevel}${lastTieRank ? `, tie on ${rankLabel(lastTieRank)}` : ''})`));
+  structure.wars.forEach((war, index) => {
+    const warLabel = `WAR! (level ${war.level}${lastTieRank ? `, tie on ${rankLabel(lastTieRank)}` : ''})`;
+    lines.push(chalk.redBright(warLabel));
+
+    const downSegments = war.participants.map((id) => {
+      const downCards = war.down[id] ?? [];
+      return `${playerName(state, id)}: ${
+        downCards.length > 0 ? downCards.map((card) => formatTableCard(card)).join(', ') : '—'
+      }`;
+    });
+    const hasDownCards = downSegments.some((segment) => !segment.endsWith('—'));
     const downCount = state.config.tieResolution === 'sudden-death' ? 0 : state.config.warFaceDownCount;
-    const downA: TableCard[] = [];
-    const downB: TableCard[] = [];
-    for (let i = 0; i < downCount; i += 1) {
-      const card = takeIf(0, true);
-      if (card) downA.push(card);
-    }
-    const upA = takeIf(0, false);
-    for (let i = 0; i < downCount; i += 1) {
-      const card = takeIf(1, true);
-      if (card) downB.push(card);
-    }
-    const upB = takeIf(1, false);
-
-    if (downCount > 0 && (downA.length > 0 || downB.length > 0)) {
-      lines.push(
-        `Down: ${players[0]}: ${downA.length > 0 ? downA.map((card) => formatTableCard(card)).join(', ') : '—'}  ${players[1]}: ${
-          downB.length > 0 ? downB.map((card) => formatTableCard(card)).join(', ') : '—'
-        }`,
-      );
+    if (downCount > 0 && hasDownCards) {
+      lines.push(formatParticipantsLine('Down', downSegments));
     }
 
-    const isFinalWar = index === warEvents.length - 1;
-    const upLineParts = [
-      `Up:   ${players[0]}: ${upA ? formatTableCard(upA) : '—'}`,
-      `${players[1]}: ${upB ? formatTableCard(upB) : '—'}`,
-    ];
-    if (isFinalWar && trick && verbosity !== 'low') {
-      const winner = playerName(state, trick.winner);
-      upLineParts.push(`=> ${winner} wins ${trick.collected.length} card(s)`);
+    const upSegments = war.participants.map((id) => {
+      const card = war.up[id];
+      return `${playerName(state, id)}: ${card ? formatTableCard(card) : '—'}`;
+    });
+    const isFinal = index === structure.wars.length - 1;
+    if (isFinal && trick && verbosity !== 'low') {
+      upSegments.push(`=> ${playerName(state, trick.winner)} wins ${trick.collected.length} card(s)`);
     }
-    lines.push(upLineParts.join('  '));
+    lines.push(formatParticipantsLine('Up', upSegments));
 
-    lastTieRank = upA && upB && upA.card.rank === upB.card.rank ? upA.card.rank : undefined;
+    const warHighest = Math.max(
+      -Infinity,
+      ...war.participants
+        .map((id) => war.up[id]?.card.rank)
+        .filter((rank): rank is number => rank !== undefined),
+    );
+    const warTied =
+      warHighest > -Infinity ? war.participants.filter((id) => war.up[id]?.card.rank === warHighest) : [];
+    lastTieRank = warTied.length > 1 ? warHighest : undefined;
   });
 
   if (verbosity === 'high') {
-    const sequences = players
-      .map((name, idx) => `${name}: ${formatCardSequence(cards, idx)}`)
+    const sequences = structure.participants
+      .map((id) => `${playerName(state, id)}: ${formatCardSequence(cards.cards, id)}`)
       .join(' | ');
     lines.push(`Table: ${sequences}`);
   }
@@ -187,7 +256,7 @@ export const renderRoundEvents = (
   }
 
   if (cardsPlaced && verbosity !== 'low') {
-    lines.push(...formatWarSegments(cardsPlaced.cards, warEvents, state, trick, verbosity));
+    lines.push(...formatWarSegments(cardsPlaced, warEvents, state, trick, verbosity));
   }
 
   if (trick) {
@@ -244,6 +313,7 @@ export const renderHelp = (autoplay: boolean, output: Output = console.log) => {
 
 export const renderIntro = (seed: string, state: GameState, output: Output = console.log, autoplay = false) => {
   output(chalk.magentaBright(`Starting War (seed: ${seed})`));
-  output(`Players: ${state.players.map((player) => player.name).join(' vs ')}`);
+  const separator = state.players.length === 2 ? ' vs ' : ' | ';
+  output(`Players: ${state.players.map((player) => player.name).join(separator)}`);
   renderHelp(autoplay, output);
 };

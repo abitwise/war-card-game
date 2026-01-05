@@ -38,10 +38,11 @@ npx war simulate --games 10 --seed demo --json
 ### Interactive Play
 
 ```bash
-war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>] [--speed <multiplier>] [--delay-ms <ms>] [--pause-on-war]
+war play [--seed <seed>] [--players "Alice,Bob"] [--autoplay] [--ui <prompt|ink>] [--speed <multiplier>] [--delay-ms <ms>] [--pause-on-war]
 ```
 
 - Default seed: `interactive` (use `--seed` to reproduce a game).
+- Players: defaults to two players (`Player 1`, `Player 2`). Provide 2–4 comma-separated names with `--players "A,B,C"`; the CLI rejects fewer than 2 or more than 4 names.
 - Controls: `Enter` (next round), `a` (toggle autoplay bursts), `s` (stats), `q` (quit), `?` (help).
 - Output shows per-round events, wars, pile recycling, state hashes (when enabled), and game end reasons (win/timeout/stalemate).
 - Playback controls (also used by trace replay): `--speed` scales the delay between autoplay bursts (higher = faster), `--delay-ms` sets the base delay, and `--pause-on-war` pauses autoplay when a war starts.
@@ -65,15 +66,15 @@ war play [--seed <seed>] [--autoplay] [--ui <prompt|ink>] [--speed <multiplier>]
 ### Simulations
 
 ```bash
-war simulate [--games <count>] [--seed <seedBase>] [--json | --csv | --md] [--hist] [--trace ...]
+war simulate [--games <count>] [--seed <seedBase>] [--players <count>] [--json | --csv | --md] [--hist] [--trace ...]
 ```
 
-- Defaults: `--games 1`, `--seed base`.
+- Defaults: `--games 1`, `--seed base`, `--players 2` (supports 2–4 players; errors on counts outside that range).
 - Reporting formats:
   - `--json` → structured summary (percentiles, war depth distribution, interesting moments, histograms, per-game runs).
   - `--csv` → metric/value table (wins, stats, histograms, interesting moments).
   - `--md` → Markdown table + “Interesting Moments” section (optionally includes histograms when combined with `--hist`).
-- Text output (default) includes per-game averages, round percentiles (p50/p90/p99), war depth distribution, lead changes/recycles, “Interesting moments” (top 3 longest games, deepest wars, biggest swings), and optional ASCII histograms with `--hist`. Per-game seeds derive from `<seedBase>-<index>`; stats stay deterministic for a given seed base.
+- Text output (default) includes per-game averages, round percentiles (p50/p90/p99), war depth distribution, lead changes/recycles, per-player win counts (for up to 4 players), “Interesting moments” (top 3 longest games, deepest wars, biggest swings), and optional ASCII histograms with `--hist`. Per-game seeds derive from `<seedBase>-<index>`; stats stay deterministic for a given seed base.
 - Trace flags mirror `war play` (see “Simulation visibility” below) so batches can emit JSONL traces without loading full game histories into memory.
 - Example (text + histograms):
 
@@ -172,7 +173,7 @@ State hash (counts) [round 1]: 57ec02600e8268ec691d98e80ce31e965441aae9d24e7b1c8
 
 - Decks are shuffled with a seeded RNG; the same seed yields the same game.
 - Simulations derive seeds from the base seed plus the game index.
-- Default match-up is Player 1 vs Player 2 (CPU) using the rules below.
+- Default match-up is Player 1 vs Player 2 using the rules below; simulations and play mode support 2–4 players with deterministic dealing and wars among tied-highest players only.
 
 ## Default Rules
 

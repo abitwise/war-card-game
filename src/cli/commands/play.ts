@@ -10,6 +10,7 @@ import { DEFAULT_PLAYBACK_DELAY_MS } from '../../playback.js';
 
 type PlayOptions = {
   seed: string;
+  players?: string;
   autoplay?: boolean;
   ui?: string;
   trace?: string;
@@ -24,8 +25,9 @@ type PlayOptions = {
 
 export const createPlayCommand = (): Command => {
   const command = new Command('play')
-    .description('Interactive War game (player vs CPU).')
+    .description('Interactive War game (supports 2-4 players).')
     .option('--seed <seed>', 'Seed for deterministic play.', 'interactive')
+    .option('--players <names>', 'Comma-separated player names (2-4 players).')
     .option('--autoplay', 'Start the game in autoplay mode.')
     .option('--ui <mode>', 'UI mode to use (ink | prompt).', 'ink')
     .option('--trace <file>', 'Write a JSONL trace for the game.')
@@ -73,6 +75,17 @@ export const createPlayCommand = (): Command => {
         command.error('--verbosity must be one of: low, normal, high.');
       }
 
+      let playerNames: string[] | undefined;
+      if (options.players) {
+        playerNames = options.players
+          .split(',')
+          .map((name) => name.trim())
+          .filter((name) => name.length > 0);
+        if (playerNames.length < 2 || playerNames.length > 4) {
+          command.error('--players requires between 2 and 4 player names.');
+        }
+      }
+
       const speed = options.speed ?? 1;
       const delayMs = options.delayMs ?? DEFAULT_PLAYBACK_DELAY_MS;
       const pauseOnWar = Boolean(options.pauseOnWar);
@@ -85,6 +98,7 @@ export const createPlayCommand = (): Command => {
       const traceCliArgs = {
         command: 'play',
         seed: options.seed,
+        players: playerNames ?? undefined,
         ui,
         autoplay: Boolean(options.autoplay),
         traceSnapshots: options.traceSnapshots,
@@ -125,6 +139,7 @@ export const createPlayCommand = (): Command => {
       if (ui === 'ink') {
         await runInkPlay({
           seed: options.seed,
+          playerNames: playerNames ?? undefined,
           startAutoplay: Boolean(options.autoplay),
           onGameStart,
           onRoundComplete,
@@ -139,6 +154,7 @@ export const createPlayCommand = (): Command => {
 
       await playInteractiveGame({
         seed: options.seed,
+        playerNames: playerNames ?? undefined,
         startAutoplay: Boolean(options.autoplay),
         onGameStart,
         onRoundComplete,

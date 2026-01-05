@@ -57,6 +57,9 @@ type CreateGameStateOptions = {
 export const createGameState = (options: CreateGameStateOptions = {}): GameState => {
   const { playerNames = ['Player 1', 'Player 2'], deck = [], rules } = options;
   const playerCount = playerNames.length;
+  if (playerCount < 2 || playerCount > 4) {
+    throw new Error(`War requires between 2 and 4 players. Received ${playerCount}.`);
+  }
   const piles = deck.length > 0 ? dealDeckToPlayers(deck, playerCount) : Array.from({ length: playerCount }, () => []);
 
   const players = playerNames.map((name, index) => createPlayerState(name, piles[index]));
